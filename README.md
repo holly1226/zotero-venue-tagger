@@ -21,7 +21,9 @@ No Python packages or cloud API keys are required.
 
 ## Zotero badge column
 
-The included Zotero plugin adds a dedicated **榜单** column to the item list. It renders only the existing classification tags as compact badges, for example `CHI`, `浙大-A`, and `CCF-A`. It does not depend on AI4Paper and does not change item fields or attachments.
+The included Zotero plugin adds a dedicated **榜单** column to the item list. It renders classification tags as compact badges, for example `CHI`, `浙大-A`, and `CCF-A`. It does not depend on AI4Paper and never changes item fields or attachments.
+
+To classify a folder inside Zotero, select exactly one collection and choose **Tools → Scan Current Collection for Venue Tags…**. The same command is available from the collection's context menu. Zotero shows a preview first; tags are written only after confirmation. Existing tags are preserved, and rank tags are withheld from EA, Companion, poster, workshop, demo, and WiP records.
 
 Build the installable XPI:
 
