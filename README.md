@@ -1,6 +1,6 @@
 # Zotero Venue Tagger
 
-A small Codex skill and dependency-free Python CLI that previews and adds compact venue tags to Zotero items.
+A Zotero plugin, Codex skill, and dependency-free Python CLI for compact venue classification.
 
 Examples:
 
@@ -18,6 +18,18 @@ The default rules use the Zhejiang University Design 2021 list and the 2022 CCF 
 - Zotero setting enabled: **Settings → Advanced → Allow other applications on this computer to communicate with Zotero**
 
 No Python packages or cloud API keys are required.
+
+## Zotero badge column
+
+The included Zotero plugin adds a dedicated **榜单** column to the item list. It renders only the existing classification tags as compact badges, for example `CHI`, `浙大-A`, and `CCF-A`. It does not depend on AI4Paper and does not change item fields or attachments.
+
+Build the installable XPI:
+
+```bash
+sh scripts/build_plugin.sh
+```
+
+Then open **Zotero → Tools → Add-ons**, choose **Install Add-on From File…**, and select the generated file in `dist/`. If the column is hidden, right-click the item-list header and enable **榜单**.
 
 ## Install as a Codex skill
 
@@ -65,6 +77,7 @@ Zotero will show a local authorization dialog. The script never edits `zotero.sq
 
 ```bash
 python3 -m unittest discover -s tests -v
+node zotero-plugin/test.js
 python3 /path/to/skill-creator/scripts/quick_validate.py .
 ```
 

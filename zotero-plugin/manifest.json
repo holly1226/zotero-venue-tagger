@@ -1,0 +1,16 @@
+{
+  "manifest_version": 2,
+  "name": "Zotero Venue Tagger",
+  "version": "0.1.0",
+  "description": "Shows compact venue, Zhejiang University, CCF, and track badges in a dedicated Zotero item-list column.",
+  "author": "holly1226",
+  "homepage_url": "https://github.com/holly1226/zotero-venue-tagger",
+  "applications": {
+    "zotero": {
+      "id": "zotero-venue-tagger@holly1226.github.io",
+      "update_url": "https://raw.githubusercontent.com/holly1226/zotero-venue-tagger/main/updates.json",
+      "strict_min_version": "7.0",
+      "strict_max_version": "10.*"
+    }
+  }
+}
