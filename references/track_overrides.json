@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "description": "Public DOI-to-track corrections used when Zotero metadata only says Extended Abstracts or Companion.",
+  "overrides": {
+    "10.1145/3772363.3798404": "EA-Poster",
+    "10.1145/3772363.3798594": "EA-Poster",
+    "10.1145/3714394.3754362": "Companion-Poster",
+    "10.1145/3772363.3798764": "EA-Poster",
+    "10.1145/3772363.3799073": "EA-Poster",
+    "10.1145/3706599.3720221": "EA-LBW",
+    "10.1145/3715668.3736350": "Companion-WiP"
+  }
+}

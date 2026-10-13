@@ -1,0 +1,7 @@
+interface:
+  display_name: "Zotero Venue Tagger"
+  short_description: "为 Zotero 文献添加会场、浙大与 CCF 标签"
+  default_prompt: "Use $zotero-venue-tagger to preview compact venue and ranking tags for my Zotero library."
+
+policy:
+  allow_implicit_invocation: true
