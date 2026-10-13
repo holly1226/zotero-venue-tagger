@@ -24,7 +24,7 @@ No Python packages or cloud API keys are required.
 Clone this repository into your Codex skills folder:
 
 ```bash
-git clone <repository-url> ~/.codex/skills/zotero-venue-tagger
+git clone https://github.com/holly1226/zotero-venue-tagger.git ~/.codex/skills/zotero-venue-tagger
 ```
 
 Restart or reload Codex, then invoke `$zotero-venue-tagger`.
