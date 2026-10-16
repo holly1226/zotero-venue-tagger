@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Test Python classifier and safe apply path
+        run: python3 -m unittest discover -s tests -v
+      - name: Test Zotero plugin logic
+        run: node zotero-plugin/test.js
+      - name: Build and inspect XPI
+        run: |
+          sh scripts/build_plugin.sh
+          unzip -t dist/zotero-venue-tagger-0.3.0.xpi

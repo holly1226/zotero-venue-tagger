@@ -71,6 +71,41 @@ assert.deepEqual(
   ["浙大-B", "CCF-C"]
 );
 
+const genericEA = tagger.classifyItem(makeItem({
+  itemType: "conferencePaper",
+  title: "An Extended Abstract",
+  proceedingsTitle: "Extended Abstracts of the 2026 CHI Conference on Human Factors in Computing Systems"
+}));
+assert.equal(genericEA.nonFull, true);
+assert.equal(genericEA.trackNeedsReview, true);
+assert.deepEqual(genericEA.proposedTags, ["CHI", "EA"]);
+
+global.Zotero = { locale: "zh-CN" };
+const preview = tagger.previewMessage(
+  { name: "Social Interaction" },
+  [genericEA],
+  3
+);
+assert.match(preview, /识别 1 篇（非全文轨道 1 篇），未识别 2 篇/);
+assert.match(preview, /无法从现有元数据判断/);
+
+const customRules = {
+  schema_version: 1,
+  rule_set: "test",
+  venues: [{
+    id: "custom-venue",
+    acronym: "MYVENUE",
+    priority: 1,
+    item_types: ["conferencePaper"],
+    patterns: ["My Custom Conference"],
+    zju: null,
+    ccf: null
+  }]
+};
+tagger.setRuleDataForTests({ rules: customRules, overrides: { overrides: {} } });
+assert.deepEqual(tagger.selectDisplayTags(["MYVENUE", "unknown"]), ["MYVENUE"]);
+tagger.setRuleDataForTests({ rules, overrides });
+
 class FakeElement {
   constructor() {
     this.children = [];
@@ -147,6 +182,7 @@ class FakeElement {
 
   let confirmCalls = 0;
   let saveCalls = 0;
+  let saveOptions;
   const scanItem = makeItem({
     itemType: "conferencePaper",
     title: "One-click Scan Test",
@@ -154,7 +190,10 @@ class FakeElement {
   });
   scanItem.isRegularItem = () => true;
   scanItem.addTag = tag => scanItem.getTags = () => [{ tag }];
-  scanItem.saveTx = async () => { saveCalls += 1; };
+  scanItem.saveTx = async options => {
+    saveCalls += 1;
+    saveOptions = options;
+  };
   global.Services = {
     prompt: {
       alert() {},
@@ -165,19 +204,27 @@ class FakeElement {
     }
   };
   global.Zotero = {
+    version: "10.0.7",
     locale: "zh-CN",
     getMainWindow: () => null,
     getActiveZoteroPane: () => ({
-      getSelectedCollections: () => [{ name: "Test Collection", getChildItems: () => [scanItem] }],
+      getSelectedCollections: () => [],
       itemsView: { refresh: async () => {} }
     }),
     Libraries: { get: () => ({ editable: true }) },
     logError(error) { throw error; },
     debug() {}
   };
-  await tagger.scanCurrentCollection();
+  const contextCollection = { name: "Test Collection", getChildItems: () => [scanItem] };
+  await registeredMenus[1].menus[0].onCommand(null, {
+    collectionTreeRows: [{ ref: contextCollection }]
+  });
   assert.equal(confirmCalls, 1);
   assert.equal(saveCalls, 1);
+  assert.deepEqual(saveOptions, {
+    undoAction: "undo-action-edit-metadata",
+    undoActionArgs: { count: 1 }
+  });
   console.log("Zotero plugin badge tests passed");
 })().catch(error => {
   console.error(error);

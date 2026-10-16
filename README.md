@@ -24,13 +24,13 @@ The plugin adds a dedicated **榜单** column to Zotero and displays classificat
 3. Choose **Install Plugin From File…** and select the downloaded `.xpi`.
 4. If the column is hidden, right-click the item-list header and enable **榜单**.
 
-Zotero 10 is recommended and is the version currently tested.
+The one-click plugin supports Zotero 8 through Zotero 10.0.x. Zotero 10 is recommended and is the version currently tested.
 
 ### One-click scan
 
 Select exactly one collection, then choose **Tools → Scan Current Collection for Venue Tags…**. The same command is available from the collection's context menu.
 
-Zotero shows a preview before writing. Existing tags are preserved, and rank tags are not added to EA, Companion, Poster, Workshop, Demo, or WiP records.
+Zotero shows a preview before writing, including recognized, unmatched, non-full-track, and changed-item counts. Generic `EA` or `Companion` matches are explicitly flagged for review when the metadata does not identify a subtype. Existing tags are preserved, rank tags are not added to non-full-paper records, and Zotero 10 changes can be undone from **Edit → Undo**.
 
 ## Codex skill
 
@@ -90,6 +90,8 @@ python3 -m unittest discover -s tests -v
 node zotero-plugin/test.js
 ```
 
+Every push and pull request runs the same classification tests, validates all bundled regular expressions and grades, and verifies that the XPI can be built.
+
 Institutional classifications change over time. The repository records the rule-set dates and keeps ZJU and CCF grades as separate tags so conflicts remain visible.
 
 ## License
@@ -122,13 +124,13 @@ MIT
 3. 选择**从文件安装插件…**，然后选中下载的 `.xpi`。
 4. 如果看不到该列，右键文献列表表头，勾选 **榜单**。
 
-建议使用 Zotero 10，这也是当前已完成实机测试的版本。
+一键扫描插件支持 Zotero 8 至 Zotero 10.0.x。建议使用 Zotero 10，这也是当前已完成实机测试的版本。
 
 ### 一键扫描
 
 在左侧只选中一个文件夹，然后选择 **工具 → 扫描当前文件夹（榜单标签）…**。也可以右键文件夹，选择同名菜单。
 
-写入前会显示预览，只有确认后才新增标签。原有标签会被保留；EA、Companion、Poster、Workshop、Demo 和 WiP 等记录不会添加会议等级。
+写入前会显示预览，包括识别、未识别、非全文轨道和待更新数量；如果元数据只能判断为 `EA` 或 `Companion`、无法确认 Poster/WiP 等子类型，也会明确提示复核。只有确认后才新增标签，原有标签会被保留，非 full-paper 记录不会添加会议等级；在 Zotero 10 中还可以通过**编辑 → 撤销**恢复。
 
 ## Codex Skill
 
@@ -187,6 +189,8 @@ sh scripts/build_plugin.sh
 python3 -m unittest discover -s tests -v
 node zotero-plugin/test.js
 ```
+
+每次向 GitHub 推送或提交 Pull Request，都会自动运行同一套分类测试、校验规则中的正则表达式和等级，并验证 XPI 是否能够成功构建。
 
 院校认定会随时间变化。本仓库保留规则版本日期，并将浙大和 CCF 等级分别保存为标签，以便显示两套标准之间的差异。
 

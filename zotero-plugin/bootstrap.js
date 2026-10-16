@@ -8,7 +8,7 @@ var ZoteroVenueTagger = (() => {
     "Doctoral-Consortium", "SRC"
   ];
 
-  const VENUE_TAGS = new Set([
+  const FALLBACK_VENUE_TAGS = new Set([
     "ASSETS", "AVI", "BIT", "C&C", "CHB", "CHI", "CSCW",
     "CSCW-Journal", "CSCWD", "CollaborateCom", "CoopIS", "DIS",
     "Design Studies", "Design Issues", "Design Science",
@@ -29,10 +29,12 @@ var ZoteroVenueTagger = (() => {
       selectOne: "请先在左侧只选中一个文件夹。",
       noItems: "当前文件夹没有可扫描的文献。",
       noMatch: "未识别到榜单中的 venue。\n\n不会修改任何标签。",
-      noChanges: "已识别 {matched} 篇，相关标签都已存在，无需更新。",
-      preview: "文件夹：{name}\n共 {total} 篇，识别 {matched} 篇，将更新 {changed} 篇。\n\n{lines}{more}\n\n只会新增上述标签，不会删除或替换原标签。现在写入吗？",
+      noChanges: "识别 {matched} 篇，未识别 {unmatched} 篇；相关标签都已存在，无需更新。{review}",
+      preview: "文件夹：{name}\n共 {total} 篇：识别 {matched} 篇（非全文轨道 {nonFull} 篇），未识别 {unmatched} 篇，将更新 {changed} 篇。{review}\n\n{lines}{more}\n\n只会新增上述标签，不会删除或替换原标签；未识别文献保持不变。现在写入吗？",
+      review: "\n其中 {count} 篇只能识别为 EA/Companion，无法从现有元数据判断 Poster、WiP 等子类型，请写入后复核。",
       more: "\n…另有 {count} 篇",
       done: "已为 {count} 篇文献新增榜单标签。",
+      doneWithSkipped: "已为 {count} 篇文献新增榜单标签；另有 {skipped} 篇因文库只读而跳过。",
       failed: "扫描失败：{message}"
     },
     en: {
@@ -41,10 +43,12 @@ var ZoteroVenueTagger = (() => {
       selectOne: "Select exactly one collection in the left pane first.",
       noItems: "The current collection has no scannable items.",
       noMatch: "No supported venues were recognized.\n\nNo tags were changed.",
-      noChanges: "Recognized {matched} items; all classification tags already exist.",
-      preview: "Collection: {name}\n{total} items, {matched} recognized, {changed} to update.\n\n{lines}{more}\n\nOnly the tags shown above will be added. Existing tags will not be removed or replaced. Apply now?",
+      noChanges: "Recognized {matched} items and left {unmatched} unmatched; all recognized classification tags already exist.{review}",
+      preview: "Collection: {name}\n{total} items: {matched} recognized ({nonFull} non-full tracks), {unmatched} unmatched, {changed} to update.{review}\n\n{lines}{more}\n\nOnly the tags shown above will be added. Existing tags will not be removed or replaced, and unmatched items remain unchanged. Apply now?",
+      review: "\n{count} item(s) could only be classified as EA/Companion; the available metadata does not identify a Poster, WiP, or other subtype. Review these after applying.",
       more: "\n…and {count} more",
       done: "Added classification tags to {count} items.",
+      doneWithSkipped: "Added classification tags to {count} items; skipped {skipped} item(s) because the library is read-only.",
       failed: "Scan failed: {message}"
     }
   };
@@ -52,6 +56,7 @@ var ZoteroVenueTagger = (() => {
   let registeredDataKey = null;
   let registeredMenuIDs = [];
   let ruleData = { rules: { venues: [] }, overrides: { overrides: {} } };
+  let venueTags = new Set(FALLBACK_VENUE_TAGS);
   let scanning = false;
 
   function language() {
@@ -67,7 +72,7 @@ var ZoteroVenueTagger = (() => {
   }
 
   function tagKind(tag) {
-    if (VENUE_TAGS.has(tag)) return "venue";
+    if (venueTags.has(tag)) return "venue";
     if (/^浙大-[ABC]$/.test(tag)) return "zju";
     if (/^CCF-[ABC]$/.test(tag)) return "ccf";
     if (TRACK_PATTERN.test(tag)) return "track";
@@ -219,6 +224,10 @@ var ZoteroVenueTagger = (() => {
     return Boolean(track) && NON_FULL_PREFIXES.some(prefix => track === prefix || track.startsWith(`${prefix}-`));
   }
 
+  function trackNeedsReview(track) {
+    return track === "EA" || track === "Companion";
+  }
+
   function classifyItem(item, rules = ruleData.rules, overrides = ruleData.overrides) {
     const rule = matchRule(item, rules);
     if (!rule) return null;
@@ -243,6 +252,8 @@ var ZoteroVenueTagger = (() => {
       title: cleanText(itemField(item, "title")),
       venue: rule.acronym,
       track,
+      nonFull: isNonFull(track),
+      trackNeedsReview: trackNeedsReview(track),
       proposedTags,
       addTags
     };
@@ -321,8 +332,17 @@ var ZoteroVenueTagger = (() => {
     return pane.getSelectedCollection?.() || null;
   }
 
+  function collectionFromMenuContext(context) {
+    const rows = context?.collectionTreeRows;
+    if (!Array.isArray(rows) || rows.length !== 1) return null;
+    const collection = rows[0]?.ref;
+    return collection && typeof collection.getChildItems === "function" ? collection : null;
+  }
+
   function previewMessage(collection, rows, total) {
     const changed = rows.filter(row => row.addTags.length);
+    const nonFull = rows.filter(row => row.nonFull).length;
+    const needsReview = rows.filter(row => row.trackNeedsReview).length;
     const visible = changed.slice(0, 12).map(row => {
       const title = row.title.length > 42 ? `${row.title.slice(0, 41).trim()}…` : row.title;
       return `• ${title}\n  ${row.addTags.join(" · ")}`;
@@ -332,19 +352,31 @@ var ZoteroVenueTagger = (() => {
       name: collection.name,
       total,
       matched: rows.length,
+      unmatched: total - rows.length,
+      nonFull,
       changed: changed.length,
+      review: needsReview ? text("review", { count: needsReview }) : "",
       lines: visible,
       more
     });
   }
 
-  async function scanCurrentCollection() {
+  function undoSaveOptions() {
+    const major = Number.parseInt(String(globalThis.Zotero?.version || "0").split(".")[0], 10);
+    if (major < 10) return null;
+    return {
+      undoAction: "undo-action-edit-metadata",
+      undoActionArgs: { count: 1 }
+    };
+  }
+
+  async function scanCurrentCollection(preferredCollection = null) {
     if (scanning) return;
     scanning = true;
     const win = Zotero.getMainWindow?.() || null;
     try {
       const pane = Zotero.getActiveZoteroPane();
-      const collection = pane && selectedCollection(pane);
+      const collection = preferredCollection || (pane && selectedCollection(pane));
       if (!collection) {
         promptAlert(text("selectOne"), win);
         return;
@@ -366,7 +398,12 @@ var ZoteroVenueTagger = (() => {
       }
       const changed = rows.filter(row => row.addTags.length);
       if (!changed.length) {
-        promptAlert(text("noChanges", { matched: rows.length }), win);
+        const needsReview = rows.filter(row => row.trackNeedsReview).length;
+        promptAlert(text("noChanges", {
+          matched: rows.length,
+          unmatched: items.length - rows.length,
+          review: needsReview ? text("review", { count: needsReview }) : ""
+        }), win);
         return;
       }
 
@@ -374,15 +411,22 @@ var ZoteroVenueTagger = (() => {
       if (!approved) return;
 
       let applied = 0;
+      let skipped = 0;
       for (const row of changed) {
         const library = Zotero.Libraries.get(row.item.libraryID);
-        if (library && library.editable === false) continue;
+        if (library && library.editable === false) {
+          skipped += 1;
+          continue;
+        }
         for (const tag of row.addTags) row.item.addTag(tag);
-        await row.item.saveTx();
+        const options = undoSaveOptions();
+        if (options) await row.item.saveTx(options);
+        else await row.item.saveTx();
         applied += 1;
       }
       if (pane.itemsView?.refresh) await pane.itemsView.refresh();
-      promptAlert(text("done", { count: applied }), win);
+      const doneKey = skipped ? "doneWithSkipped" : "done";
+      promptAlert(text(doneKey, { count: applied, skipped }), win);
     }
     catch (error) {
       Zotero.logError(error);
@@ -399,6 +443,14 @@ var ZoteroVenueTagger = (() => {
     Services.scriptloader.loadSubScript(`${rootURI}rules.js`, scope);
     if (!scope.ZoteroVenueTaggerRuleData) throw new Error("Bundled venue rules are missing");
     ruleData = scope.ZoteroVenueTaggerRuleData;
+    refreshVenueTags();
+  }
+
+  function refreshVenueTags() {
+    const configured = (ruleData.rules?.venues || [])
+      .map(rule => cleanText(rule.acronym))
+      .filter(Boolean);
+    venueTags = configured.length ? new Set(configured) : new Set(FALLBACK_VENUE_TAGS);
   }
 
   function loadLocalization(win) {
@@ -416,7 +468,7 @@ var ZoteroVenueTagger = (() => {
         onShowing: (_event, context) => {
           context.menuElem?.setAttribute("label", text("scanLabel"));
         },
-        onCommand: () => scanCurrentCollection()
+        onCommand: (_event, context) => scanCurrentCollection(collectionFromMenuContext(context))
       }]
     });
     registeredMenuIDs = [menu("main/menubar/tools"), menu("main/library/collection")];
@@ -457,6 +509,7 @@ var ZoteroVenueTagger = (() => {
 
   function setRuleDataForTests(data) {
     ruleData = data;
+    refreshVenueTags();
   }
 
   return {

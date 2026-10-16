@@ -82,6 +82,32 @@ class ClassificationTests(unittest.TestCase):
         self.assertEqual(result["venue"], "CSCW")
         self.assertEqual(result["proposed_tags"], ["CSCW", "浙大-A", "CCF-A"])
 
+    def test_pacmhci_without_cscw_issue_stays_pacmhci(self):
+        result = tagger.classify_item(
+            item("PAC00001", "journalArticle", "Article", "Proceedings of the ACM on Human-Computer Interaction", pages="1-24"),
+            RULES,
+            OVERRIDES,
+        )
+        self.assertEqual(result["venue"], "PACMHCI")
+        self.assertEqual(result["proposed_tags"], ["PACMHCI", "浙大-C", "CCF-C"])
+
+    def test_bare_chi_acronym_is_not_enough_to_match(self):
+        result = tagger.classify_item(
+            item("NOCHI001", "conferencePaper", "Paper", "CHI"),
+            RULES,
+            OVERRIDES,
+        )
+        self.assertIsNone(result)
+
+    def test_generic_extended_abstract_warns_and_withholds_ranks(self):
+        result = tagger.classify_item(
+            item("CHI00004", "conferencePaper", "Abstract", "Extended Abstracts of the 2026 CHI Conference on Human Factors in Computing Systems"),
+            RULES,
+            OVERRIDES,
+        )
+        self.assertEqual(result["proposed_tags"], ["CHI", "EA"])
+        self.assertEqual(result["warning"], "track subtype not available in Zotero metadata")
+
     def test_existing_tags_are_preserved_and_deduplicated(self):
         source = item(
             "CHI00003",
