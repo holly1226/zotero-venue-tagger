@@ -1,6 +1,10 @@
 var ZoteroVenueTagger = (() => {
   const PLUGIN_ID = "zotero-venue-tagger@holly1226.github.io";
   const COLUMN_KEY = "venue-rank-badges";
+  const PREF_PREFIX = "extensions.zotero-venue-tagger.";
+  const PREF_CUSTOM_RULES = `${PREF_PREFIX}customRules`;
+  const PREF_SCAN_SOURCE = `${PREF_PREFIX}scanSource`;
+  const PREF_DISPLAY_SOURCE = `${PREF_PREFIX}displaySource`;
   const XHTML_NS = "http://www.w3.org/1999/xhtml";
   const MAX_BADGES = 5;
   const NON_FULL_PREFIXES = [
@@ -27,6 +31,22 @@ var ZoteroVenueTagger = (() => {
       title: "HCI Venue Tagger",
       columnLabel: "HCI 榜单",
       scanLabel: "识别 HCI 榜单",
+      importLabel: "导入榜单 CSV",
+      scanSourceLabel: "识别来源：{mode}",
+      displaySourceLabel: "列显示：{mode}",
+      modeBuiltin: "内置",
+      modeBoth: "全部",
+      modeCustom: "自定义",
+      modeCustomSource: "自定义 · {name}",
+      sourcePickerTitle: "选择榜单来源",
+      scanSourcePrompt: "扫描时使用哪些规则？",
+      displaySourcePrompt: "HCI 榜单列显示哪些来源的标签？",
+      importTitle: "导入自定义榜单",
+      importPreview: "文件：{name}\n有效规则 {count} 条，来源 {sources} 个。{warnings}\n\n{lines}{more}\n\n导入会替换当前自定义榜单，但不会扫描文献，也不会改动任何 Zotero 标签。继续吗？",
+      importWarnings: "\n已跳过 {count} 行无效或重复数据。",
+      importDone: "已导入 {count} 条自定义规则。\n\n目前识别来源：{scan}\n目前列显示：{display}\n\n导入本身没有扫描文献或写入标签。",
+      importEmpty: "没有找到有效规则。CSV 前两列必须是期刊/会议名和期望标签。{details}",
+      importFailed: "导入失败：{message}",
       selectOne: "请先在左侧只选中一个文件夹。",
       noItems: "当前文件夹没有可扫描的文献。",
       noMatch: "未识别到榜单中的 venue。\n\n不会修改任何标签。",
@@ -42,6 +62,22 @@ var ZoteroVenueTagger = (() => {
       title: "HCI Venue Tagger",
       columnLabel: "HCI Lists",
       scanLabel: "Identify HCI Venues",
+      importLabel: "Import List CSV",
+      scanSourceLabel: "Scan source: {mode}",
+      displaySourceLabel: "Column display: {mode}",
+      modeBuiltin: "Built-in",
+      modeBoth: "All",
+      modeCustom: "Custom",
+      modeCustomSource: "Custom · {name}",
+      sourcePickerTitle: "Choose list sources",
+      scanSourcePrompt: "Which rules should scans use?",
+      displaySourcePrompt: "Which sources should the HCI Lists column display?",
+      importTitle: "Import Custom List",
+      importPreview: "File: {name}\n{count} valid rules from {sources} source(s).{warnings}\n\n{lines}{more}\n\nImporting replaces the current custom list, but does not scan items or change any Zotero tags. Continue?",
+      importWarnings: "\nSkipped {count} invalid or duplicate row(s).",
+      importDone: "Imported {count} custom rules.\n\nCurrent scan source: {scan}\nCurrent column display: {display}\n\nThe import itself did not scan items or write tags.",
+      importEmpty: "No valid rules were found. The first two CSV columns must contain a journal/conference name and desired tag.{details}",
+      importFailed: "Import failed: {message}",
       selectOne: "Select exactly one collection in the left pane first.",
       noItems: "The current collection has no scannable items.",
       noMatch: "No supported venues were recognized.\n\nNo tags were changed.",
@@ -58,7 +94,13 @@ var ZoteroVenueTagger = (() => {
   let registeredDataKey = null;
   let registeredMenuIDs = [];
   let ruleData = { rules: { venues: [] }, overrides: { overrides: {} } };
-  let venueTags = new Set(FALLBACK_VENUE_TAGS);
+  let customRuleData = { schema_version: 1, venues: [] };
+  let builtinVenueTags = new Set(FALLBACK_VENUE_TAGS);
+  let customTags = new Set();
+  let customTagsBySource = new Map();
+  let customTagOrder = new Map();
+  let scanSourceMode = "both";
+  let displaySourceMode = "both";
   let scanning = false;
 
   function language() {
@@ -73,11 +115,35 @@ var ZoteroVenueTagger = (() => {
     return value;
   }
 
+  function includesBuiltin(mode) {
+    return mode === "builtin" || mode === "both";
+  }
+
+  function includesCustom(mode) {
+    return mode === "custom" || mode === "both" || mode.startsWith("source:");
+  }
+
+  function sourceNameFromMode(mode) {
+    return mode.startsWith("source:") ? mode.slice("source:".length) : null;
+  }
+
+  function sourceModeLabel(mode) {
+    const sourceName = sourceNameFromMode(mode);
+    if (sourceName) return text("modeCustomSource", { name: sourceName });
+    return text(mode === "builtin" ? "modeBuiltin" : mode === "custom" ? "modeCustom" : "modeBoth");
+  }
+
   function tagKind(tag) {
-    if (venueTags.has(tag)) return "venue";
-    if (/^浙大-[ABC]$/.test(tag)) return "zju";
-    if (/^CCF-[ABC]$/.test(tag)) return "ccf";
-    if (TRACK_PATTERN.test(tag)) return "track";
+    const builtinAllowed = includesBuiltin(displaySourceMode);
+    const selectedCustomTags = sourceNameFromMode(displaySourceMode)
+      ? (customTagsBySource.get(sourceNameFromMode(displaySourceMode)) || new Set())
+      : customTags;
+    const customAllowed = includesCustom(displaySourceMode) && selectedCustomTags.has(tag);
+    if (builtinAllowed && builtinVenueTags.has(tag)) return "venue";
+    if (/^浙大-[ABC]$/.test(tag) && (builtinAllowed || customAllowed)) return "zju";
+    if (/^CCF-[ABC]$/.test(tag) && (builtinAllowed || customAllowed)) return "ccf";
+    if (TRACK_PATTERN.test(tag) && (builtinAllowed || includesCustom(displaySourceMode))) return "track";
+    if (customAllowed) return "custom";
     return null;
   }
 
@@ -87,11 +153,15 @@ var ZoteroVenueTagger = (() => {
   }
 
   function compareTags(left, right) {
-    const kindOrder = { venue: 0, zju: 1, ccf: 2, track: 3 };
+    const kindOrder = { venue: 0, custom: 0, zju: 1, ccf: 2, track: 3 };
     const leftKind = tagKind(left);
     const rightKind = tagKind(right);
     const kindDifference = kindOrder[leftKind] - kindOrder[rightKind];
     if (kindDifference) return kindDifference;
+    if (leftKind === "custom" && rightKind === "custom") {
+      const customDifference = (customTagOrder.get(left) ?? 9999) - (customTagOrder.get(right) ?? 9999);
+      if (customDifference) return customDifference;
+    }
     if (RANK_PATTERN.test(left) && RANK_PATTERN.test(right)) {
       const rankDifference = rankValue(left) - rankValue(right);
       if (rankDifference) return rankDifference;
@@ -117,6 +187,115 @@ var ZoteroVenueTagger = (() => {
       .replace(/&#39;/g, "'")
       .replace(/\s+/g, " ")
       .trim();
+  }
+
+  function parseDelimitedText(input, delimiter = null) {
+    const source = String(input ?? "").replace(/^\uFEFF/, "");
+    const firstLine = source.split(/\r?\n/, 1)[0] || "";
+    const separator = delimiter || ((firstLine.match(/\t/g) || []).length > (firstLine.match(/,/g) || []).length ? "\t" : ",");
+    const rows = [];
+    let row = [];
+    let field = "";
+    let quoted = false;
+    for (let index = 0; index < source.length; index += 1) {
+      const char = source[index];
+      if (quoted) {
+        if (char === '"' && source[index + 1] === '"') {
+          field += '"';
+          index += 1;
+        }
+        else if (char === '"') quoted = false;
+        else field += char;
+      }
+      else if (char === '"') quoted = true;
+      else if (char === separator) {
+        row.push(field);
+        field = "";
+      }
+      else if (char === "\n" || char === "\r") {
+        if (char === "\r" && source[index + 1] === "\n") index += 1;
+        row.push(field);
+        if (row.some(value => cleanText(value))) rows.push(row);
+        row = [];
+        field = "";
+      }
+      else field += char;
+    }
+    row.push(field);
+    if (row.some(value => cleanText(value))) rows.push(row);
+    return rows;
+  }
+
+  function escapeRegExp(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  function customVenuePattern(value) {
+    const escaped = escapeRegExp(cleanText(value));
+    if (/^[A-Za-z][A-Za-z0-9&+.-]{1,15}$/.test(value)) return `(?i)\\b${escaped}\\b`;
+    return `(?i)${escaped}`;
+  }
+
+  function splitList(value) {
+    return cleanText(value).split(/[|;；]/).map(cleanText).filter(Boolean);
+  }
+
+  function customItemTypes(value) {
+    const normalized = cleanText(value).toLowerCase();
+    if (!normalized || ["all", "both", "全部", "通用"].includes(normalized)) {
+      return ["conferencePaper", "journalArticle"];
+    }
+    const result = [];
+    if (/conference|meeting|会议/.test(normalized)) result.push("conferencePaper");
+    if (/journal|期刊/.test(normalized)) result.push("journalArticle");
+    return result.length ? result : ["conferencePaper", "journalArticle"];
+  }
+
+  function looksLikeHeader(row) {
+    const first = cleanText(row[0]).toLowerCase();
+    const second = cleanText(row[1]).toLowerCase();
+    return /venue|journal|conference|期刊|会议/.test(first) && /tag|label|标签/.test(second);
+  }
+
+  function parseCustomVenueList(input) {
+    const rows = parseDelimitedText(input);
+    const dataRows = rows.slice(looksLikeHeader(rows[0] || []) ? 1 : 0);
+    const venues = [];
+    const errors = [];
+    const seen = new Set();
+    for (let index = 0; index < dataRows.length; index += 1) {
+      const row = dataRows[index];
+      const venue = cleanText(row[0]);
+      const tags = splitList(row[1]);
+      if (!venue || !tags.length) {
+        errors.push({ row: index + 1, reason: "missing venue or tag" });
+        continue;
+      }
+      const aliases = splitList(row[2]);
+      const source = cleanText(row[3]) || (language() === "zh" ? "自定义榜单" : "Custom list");
+      const duplicateKey = `${source}\u0000${venue}`.toLowerCase();
+      if (seen.has(duplicateKey)) {
+        errors.push({ row: index + 1, reason: "duplicate venue" });
+        continue;
+      }
+      seen.add(duplicateKey);
+      venues.push({
+        id: `custom-${venues.length + 1}`,
+        name: venue,
+        acronym: tags[0],
+        custom_tags: [...new Set(tags)],
+        source,
+        priority: 200,
+        item_types: customItemTypes(row[4]),
+        patterns: [...new Set([venue, ...aliases])].map(customVenuePattern)
+      });
+    }
+    return {
+      schema_version: 1,
+      venues,
+      errors,
+      sources: [...new Set(venues.map(rule => rule.source))]
+    };
   }
 
   function normalizeDOI(value) {
@@ -167,6 +346,16 @@ var ZoteroVenueTagger = (() => {
     return new RegExp(pattern, flags);
   }
 
+  function activeRules(mode = scanSourceMode) {
+    const venues = [];
+    if (includesCustom(mode)) {
+      const sourceName = sourceNameFromMode(mode);
+      venues.push(...(customRuleData.venues || []).filter(rule => !sourceName || rule.source === sourceName));
+    }
+    if (includesBuiltin(mode)) venues.push(...(ruleData.rules?.venues || []));
+    return { venues };
+  }
+
   function matchesPattern(source, pattern) {
     try {
       return compilePattern(pattern).test(source);
@@ -177,7 +366,7 @@ var ZoteroVenueTagger = (() => {
     }
   }
 
-  function matchRule(item, rules = ruleData.rules) {
+  function matchRule(item, rules = activeRules()) {
     const source = venueText(item);
     const itemType = itemTypeName(item);
     const ordered = [...(rules?.venues || [])].sort((a, b) => (b.priority || 0) - (a.priority || 0));
@@ -230,19 +419,23 @@ var ZoteroVenueTagger = (() => {
     return track === "EA" || track === "Companion";
   }
 
-  function classifyItem(item, rules = ruleData.rules, overrides = ruleData.overrides) {
+  function classifyItem(item, rules = activeRules(), overrides = ruleData.overrides) {
     const rule = matchRule(item, rules);
     if (!rule) return null;
 
     const track = inferTrack(item, overrides);
-    const proposedTags = [rule.acronym];
+    const proposedTags = Array.isArray(rule.custom_tags) && rule.custom_tags.length
+      ? [...rule.custom_tags]
+      : [rule.acronym];
     if (track) proposedTags.push(track);
 
-    let zju = rule.zju || null;
-    if (!zju && rule.ccf) zju = rule.ccf;
-    if (!isNonFull(track)) {
-      if (zju) proposedTags.push(`浙大-${zju}`);
-      if (rule.ccf) proposedTags.push(`CCF-${rule.ccf}`);
+    if (!rule.custom_tags) {
+      let zju = rule.zju || null;
+      if (!zju && rule.ccf) zju = rule.ccf;
+      if (!isNonFull(track)) {
+        if (zju) proposedTags.push(`浙大-${zju}`);
+        if (rule.ccf) proposedTags.push(`CCF-${rule.ccf}`);
+      }
     }
 
     const currentTags = typeof item.getTags === "function" ? item.getTags() : (item.tags || []);
@@ -252,7 +445,7 @@ var ZoteroVenueTagger = (() => {
       item,
       key: item.key || "",
       title: cleanText(itemField(item, "title")),
-      venue: rule.acronym,
+      venue: rule.acronym || proposedTags[0],
       track,
       nonFull: isNonFull(track),
       trackNeedsReview: trackNeedsReview(track),
@@ -287,7 +480,8 @@ var ZoteroVenueTagger = (() => {
       venue: ["#dbeafe", "#1d4ed8", "#93c5fd"],
       zju: ["#fee2e2", "#b91c1c", "#fca5a5"],
       ccf: ["#dcfce7", "#15803d", "#86efac"],
-      track: ["#f3e8ff", "#7e22ce", "#d8b4fe"]
+      track: ["#f3e8ff", "#7e22ce", "#d8b4fe"],
+      custom: ["#ffedd5", "#c2410c", "#fdba74"]
     };
     const [background, color, border] = palette[kind] || palette.venue;
     return [
@@ -324,6 +518,138 @@ var ZoteroVenueTagger = (() => {
 
   function promptAlert(message, win = null) {
     Services.prompt.alert(win, text("title"), message);
+  }
+
+  function getPreference(name, fallback) {
+    try {
+      const value = globalThis.Zotero?.Prefs?.get?.(name, true);
+      return value === undefined ? fallback : value;
+    }
+    catch (error) {
+      globalThis.Zotero?.debug?.(`[Zotero Venue Tagger] Could not read ${name}: ${error}`);
+      return fallback;
+    }
+  }
+
+  function setPreference(name, value) {
+    globalThis.Zotero?.Prefs?.set?.(name, value, true);
+  }
+
+  function validSourceMode(value) {
+    if (["both", "builtin", "custom"].includes(value)) return value;
+    return typeof value === "string" && value.startsWith("source:") ? value : "both";
+  }
+
+  function loadPreferences() {
+    scanSourceMode = validSourceMode(getPreference(PREF_SCAN_SOURCE, "both"));
+    displaySourceMode = validSourceMode(getPreference(PREF_DISPLAY_SOURCE, "both"));
+    try {
+      const stored = JSON.parse(getPreference(PREF_CUSTOM_RULES, '{"schema_version":1,"venues":[]}'));
+      customRuleData = Array.isArray(stored?.venues) ? stored : { schema_version: 1, venues: [] };
+    }
+    catch (error) {
+      customRuleData = { schema_version: 1, venues: [] };
+      globalThis.Zotero?.debug?.(`[Zotero Venue Tagger] Ignoring invalid custom rules: ${error}`);
+    }
+    refreshVenueTags();
+  }
+
+  async function refreshItemsView() {
+    try {
+      const pane = Zotero.getActiveZoteroPane?.();
+      if (pane?.itemsView?.refresh) await pane.itemsView.refresh();
+    }
+    catch (error) {
+      Zotero.debug?.(`[Zotero Venue Tagger] Could not refresh item view: ${error}`);
+    }
+  }
+
+  async function chooseSourceMode(kind) {
+    const win = Zotero.getMainWindow?.() || null;
+    const current = kind === "scan" ? scanSourceMode : displaySourceMode;
+    const sourceModes = [...new Set((customRuleData.venues || []).map(rule => rule.source))]
+      .map(source => `source:${source}`);
+    const modes = ["both", "builtin", "custom", ...sourceModes];
+    const labels = modes.map(mode => sourceModeLabel(mode));
+    const selected = { value: Math.max(0, modes.indexOf(current)) };
+    const accepted = Services.prompt.select(
+      win,
+      text("sourcePickerTitle"),
+      text(kind === "scan" ? "scanSourcePrompt" : "displaySourcePrompt"),
+      labels,
+      selected
+    );
+    if (!accepted) return;
+    const mode = modes[selected.value] || "both";
+    if (kind === "scan") {
+      scanSourceMode = mode;
+      setPreference(PREF_SCAN_SOURCE, mode);
+    }
+    else {
+      displaySourceMode = mode;
+      setPreference(PREF_DISPLAY_SOURCE, mode);
+      await refreshItemsView();
+    }
+  }
+
+  function importPreviewMessage(fileName, parsed) {
+    const lines = parsed.venues.slice(0, 12).map(rule =>
+      `• ${rule.name} → ${rule.custom_tags.join(" · ")}  [${rule.source}]`
+    ).join("\n");
+    return text("importPreview", {
+      name: fileName,
+      count: parsed.venues.length,
+      sources: parsed.sources.length,
+      warnings: parsed.errors.length ? text("importWarnings", { count: parsed.errors.length }) : "",
+      lines,
+      more: parsed.venues.length > 12 ? text("more", { count: parsed.venues.length - 12 }) : ""
+    });
+  }
+
+  async function importCustomList() {
+    const win = Zotero.getMainWindow?.() || null;
+    try {
+      const { FilePicker } = ChromeUtils.importESModule("chrome://zotero/content/modules/filePicker.mjs");
+      const picker = new FilePicker();
+      picker.init(win, text("importTitle"), picker.modeOpen);
+      picker.appendFilter("CSV / TSV", "*.csv; *.tsv; *.txt");
+      picker.appendFilters(picker.filterAll);
+      if ((await picker.show()) !== picker.returnOK) return;
+
+      const contents = await Zotero.File.getContentsAsync(picker.file);
+      const parsed = parseCustomVenueList(contents);
+      if (!parsed.venues.length) {
+        const details = parsed.errors.length ? `\n${parsed.errors.length} row(s) skipped.` : "";
+        promptAlert(text("importEmpty", { details }), win);
+        return;
+      }
+      const fileName = String(picker.file).split(/[\\/]/).pop();
+      if (!Services.prompt.confirm(win, text("title"), importPreviewMessage(fileName, parsed))) return;
+
+      customRuleData = { schema_version: 1, venues: parsed.venues };
+      for (const kind of ["scan", "display"]) {
+        const mode = kind === "scan" ? scanSourceMode : displaySourceMode;
+        const selectedSource = sourceNameFromMode(mode);
+        if (selectedSource && !parsed.sources.includes(selectedSource)) {
+          if (kind === "scan") scanSourceMode = "custom";
+          else displaySourceMode = "custom";
+        }
+      }
+      setPreference(PREF_CUSTOM_RULES, JSON.stringify(customRuleData));
+      setPreference(PREF_SCAN_SOURCE, scanSourceMode);
+      setPreference(PREF_DISPLAY_SOURCE, displaySourceMode);
+      refreshVenueTags();
+      await refreshItemsView();
+      promptAlert(text("importDone", {
+        count: parsed.venues.length,
+        scan: sourceModeLabel(scanSourceMode),
+        display: sourceModeLabel(displaySourceMode)
+      }), win);
+    }
+    catch (error) {
+      Zotero.logError?.(error);
+      promptAlert(text("importFailed", { message: error.message || error }), win);
+    }
   }
 
   function selectedCollection(pane) {
@@ -452,7 +778,15 @@ var ZoteroVenueTagger = (() => {
     const configured = (ruleData.rules?.venues || [])
       .map(rule => cleanText(rule.acronym))
       .filter(Boolean);
-    venueTags = configured.length ? new Set(configured) : new Set(FALLBACK_VENUE_TAGS);
+    builtinVenueTags = configured.length ? new Set(configured) : new Set(FALLBACK_VENUE_TAGS);
+    const configuredCustomTags = (customRuleData.venues || []).flatMap(rule => rule.custom_tags || []).map(cleanText).filter(Boolean);
+    customTags = new Set(configuredCustomTags);
+    customTagsBySource = new Map();
+    for (const rule of customRuleData.venues || []) {
+      if (!customTagsBySource.has(rule.source)) customTagsBySource.set(rule.source, new Set());
+      for (const tag of rule.custom_tags || []) customTagsBySource.get(rule.source).add(cleanText(tag));
+    }
+    customTagOrder = new Map([...customTags].map((tag, index) => [tag, index]));
   }
 
   function loadLocalization(win) {
@@ -462,30 +796,58 @@ var ZoteroVenueTagger = (() => {
   function registerMenus(id, rootURI) {
     if (!Zotero.MenuManager?.registerMenu) return;
     const icon = rootURI ? `${rootURI}icons/menu-icon.svg` : null;
-    const menu = target => Zotero.MenuManager.registerMenu({
-      menuID: `${PLUGIN_ID}-${target.replaceAll("/", "-")}`,
+    const scanMenuItem = {
+      menuType: "menuitem",
+      ...(icon ? { icon } : {}),
+      onShowing: (_event, context) => {
+        context.menuElem?.setAttribute("label", text("scanLabel"));
+        // Zotero's MenuManager exposes the icon through list-style-image, but
+        // native macOS menus only paint the XUL image child when the explicit
+        // image attribute is present. Keep the official API property above
+        // and mirror it here for the native-menu compatibility path.
+        if (icon) context.menuElem?.setAttribute("image", icon);
+      },
+      onCommand: (_event, context) => scanCurrentCollection(collectionFromMenuContext(context))
+    };
+    const toolsMenu = Zotero.MenuManager.registerMenu({
+      menuID: `${PLUGIN_ID}-main-menubar-tools`,
       pluginID: id || PLUGIN_ID,
-      target,
-      menus: [{
+      target: "main/menubar/tools",
+      menus: [scanMenuItem, {
+        menuType: "separator"
+      }, {
         menuType: "menuitem",
-        ...(icon ? { icon } : {}),
         onShowing: (_event, context) => {
-          context.menuElem?.setAttribute("label", text("scanLabel"));
-          // Zotero's MenuManager exposes the icon through list-style-image, but
-          // native macOS menus only paint the XUL image child when the explicit
-          // image attribute is present. Keep the official API property above
-          // and mirror it here for the native-menu compatibility path.
-          if (icon) context.menuElem?.setAttribute("image", icon);
+          context.menuElem?.setAttribute("label", text("importLabel"));
         },
-        onCommand: (_event, context) => scanCurrentCollection(collectionFromMenuContext(context))
+        onCommand: () => importCustomList()
+      }, {
+        menuType: "menuitem",
+        onShowing: (_event, context) => {
+          context.menuElem?.setAttribute("label", text("scanSourceLabel", { mode: sourceModeLabel(scanSourceMode) }));
+        },
+        onCommand: () => chooseSourceMode("scan")
+      }, {
+        menuType: "menuitem",
+        onShowing: (_event, context) => {
+          context.menuElem?.setAttribute("label", text("displaySourceLabel", { mode: sourceModeLabel(displaySourceMode) }));
+        },
+        onCommand: () => chooseSourceMode("display")
       }]
     });
-    registeredMenuIDs = [menu("main/menubar/tools"), menu("main/library/collection")];
+    const collectionMenu = Zotero.MenuManager.registerMenu({
+      menuID: `${PLUGIN_ID}-main-library-collection`,
+      pluginID: id || PLUGIN_ID,
+      target: "main/library/collection",
+      menus: [{ ...scanMenuItem }]
+    });
+    registeredMenuIDs = [toolsMenu, collectionMenu];
   }
 
   async function startup({ id, rootURI } = {}) {
     await Zotero.initializationPromise;
     loadRuleData(rootURI);
+    loadPreferences();
     for (const win of Zotero.getMainWindows?.() || []) loadLocalization(win);
     registeredDataKey = await Zotero.ItemTreeManager.registerColumn({
       dataKey: COLUMN_KEY,
@@ -521,19 +883,31 @@ var ZoteroVenueTagger = (() => {
     refreshVenueTags();
   }
 
+  function setCustomRulesForTests(data, modes = {}) {
+    customRuleData = data;
+    scanSourceMode = validSourceMode(modes.scan || "both");
+    displaySourceMode = validSourceMode(modes.display || "both");
+    refreshVenueTags();
+  }
+
   return {
     startup,
     shutdown,
     onMainWindowLoad,
     scanCurrentCollection,
+    importCustomList,
     selectDisplayTags,
     parseDisplayValue,
+    parseDelimitedText,
+    parseCustomVenueList,
     tagKind,
     classifyItem,
     inferTrack,
     matchRule,
     previewMessage,
-    setRuleDataForTests
+    importPreviewMessage,
+    setRuleDataForTests,
+    setCustomRulesForTests
   };
 })();
 

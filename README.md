@@ -41,6 +41,25 @@ Select exactly one collection, then choose **Tools → Identify HCI Venues**. Th
 
 Zotero shows a preview before writing, including recognized, unmatched, non-full-track, and changed-item counts. Generic `EA` or `Companion` matches are explicitly flagged for review when the metadata does not identify a subtype. Existing tags are preserved, rank tags are not added to non-full-paper records, and Zotero 10 changes can be undone from **Edit → Undo**.
 
+### Custom venue lists (v0.4)
+
+Choose **Tools → Import List CSV** to add your own journal or conference rules. The first two columns are the only required fields:
+
+| Column | Required | Meaning |
+| --- | --- | --- |
+| `venue` | Yes | Journal/conference name to recognize |
+| `tag` | Yes | Tag to add; separate multiple tags with `|` |
+| `aliases` | No | Alternative names, separated with `|` |
+| `source` | No | List name, such as `My Lab 2026` |
+| `type` | No | `conference`, `journal`, or blank for both |
+
+Use the included [CSV template](examples/custom-venue-list.csv). CSV and tab-separated files are accepted. The plugin previews valid, skipped, and duplicate rows before saving the list. Importing a list does not scan the library or change item tags.
+
+Two short menu controls keep behavior explicit:
+
+- **Scan source** chooses the rules used by the next scan: all, built-in, all custom, or one named custom source.
+- **Column display** independently chooses which configured tags appear in the HCI Lists column. It does not delete Zotero tags.
+
 ## Codex skill
 
 The included skill teaches Codex to preview classifications, explain uncertain matches, and apply reviewed tag plans safely.
@@ -140,6 +159,25 @@ MIT
 在左侧只选中一个文件夹，然后选择 **工具 → 识别 HCI 榜单**。也可以右键文件夹，选择同名菜单。
 
 写入前会显示预览，包括识别、未识别、非全文轨道和待更新数量；如果元数据只能判断为 `EA` 或 `Companion`、无法确认 Poster/WiP 等子类型，也会明确提示复核。只有确认后才新增标签，原有标签会被保留，非 full-paper 记录不会添加会议等级；在 Zotero 10 中还可以通过**编辑 → 撤销**恢复。
+
+### 自定义榜单（v0.4）
+
+选择**工具 → 导入榜单 CSV**，即可加入自己的期刊或会议规则。只有前两列是必需的：
+
+| 列 | 必需 | 含义 |
+| --- | --- | --- |
+| `venue` | 是 | 需要识别的期刊/会议名 |
+| `tag` | 是 | 期望添加的标签；多个标签用 `|` 分隔 |
+| `aliases` | 否 | 别名，多个别名用 `|` 分隔 |
+| `source` | 否 | 榜单名称，例如 `实验室 2026` |
+| `type` | 否 | `conference`、`journal`，留空表示两者均可 |
+
+可直接使用仓库里的 [CSV 模板](examples/custom-venue-list.csv)。支持 CSV 和制表符分隔文件；保存前会预览有效、跳过和重复行。导入榜单本身不会扫描文库，也不会改动文献标签。
+
+菜单中还有两个独立选项：
+
+- **识别来源**：决定下次扫描使用全部、内置、全部自定义，还是某一个具名自定义来源。
+- **列显示**：独立决定 HCI 榜单列显示哪些已配置标签，不会删除 Zotero 里的标签。
 
 ## Codex Skill
 

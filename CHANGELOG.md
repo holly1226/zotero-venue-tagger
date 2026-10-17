@@ -2,6 +2,17 @@
 
 All notable changes to Zotero Venue Tagger are documented here.
 
+## 0.4.1 — 2026-10-17
+
+- Fix the list-source chooser for Zotero 10's current prompt API.
+
+## 0.4.0 — 2026-10-17
+
+- Import custom venue rules from CSV or TSV with a review step before saving.
+- Keep the minimal two-column format (`venue`, `tag`) while supporting optional aliases, named sources, and item types.
+- Let users independently choose the rule source used for scanning and the sources shown in the HCI Lists column.
+- Preserve the existing ZJU/CCF rules and continue requiring a second confirmation before any item tags are written.
+
 ## 0.3.4 — 2026-10-17
 
 - Remove the trailing ellipsis from the scan command for a cleaner, non-truncated appearance.

@@ -89,6 +89,34 @@ const preview = tagger.previewMessage(
 assert.match(preview, /识别 1 篇（非全文轨道 1 篇），未识别 2 篇/);
 assert.match(preview, /无法从现有元数据判断/);
 
+const imported = tagger.parseCustomVenueList([
+  "venue,tag,aliases,source,type",
+  '"My Conference, Annual","MYCONF|实验室-A","MCA|MyConf",Lab List,conference',
+  'Journal of Useful Things,JUT,,Lab List,journal',
+  'Journal of Useful Things,DUPLICATE,,Lab List,journal',
+  ',MISSING,,,journal'
+].join("\n"));
+assert.equal(imported.venues.length, 2);
+assert.equal(imported.errors.length, 2);
+assert.deepEqual(imported.sources, ["Lab List"]);
+assert.deepEqual(imported.venues[0].custom_tags, ["MYCONF", "实验室-A"]);
+assert.deepEqual(imported.venues[0].item_types, ["conferencePaper"]);
+
+tagger.setCustomRulesForTests(imported, { scan: "custom", display: "custom" });
+assert.deepEqual(
+  tagger.classifyItem(makeItem({
+    itemType: "conferencePaper",
+    title: "A Custom Paper",
+    proceedingsTitle: "Proceedings of MCA 2026"
+  })).proposedTags,
+  ["MYCONF", "实验室-A"]
+);
+assert.deepEqual(
+  tagger.selectDisplayTags(["CHI", "CCF-A", "MYCONF", "实验室-A"]),
+  ["MYCONF", "实验室-A"]
+);
+tagger.setCustomRulesForTests({ schema_version: 1, venues: [] });
+
 const customRules = {
   schema_version: 1,
   rule_set: "test",
@@ -164,6 +192,16 @@ class FakeElement {
   assert.equal(menuAttributes.label, "识别 HCI 榜单");
   assert.equal(menuAttributes.image, "file:///plugin/icons/menu-icon.svg");
   assert.equal(registeredMenus[0].menus[0].icon, "file:///plugin/icons/menu-icon.svg");
+  const importAttributes = {};
+  registeredMenus[0].menus[2].onShowing(null, {
+    menuElem: { setAttribute: (name, value) => { importAttributes[name] = value; } }
+  });
+  assert.equal(importAttributes.label, "导入榜单 CSV");
+  const scanSourceAttributes = {};
+  registeredMenus[0].menus[3].onShowing(null, {
+    menuElem: { setAttribute: (name, value) => { scanSourceAttributes[name] = value; } }
+  });
+  assert.equal(scanSourceAttributes.label, "识别来源：全部");
   assert.equal(
     columnConfig.dataProvider({
       getTags: () => [{ tag: "CHI" }, { tag: "浙大-A" }, { tag: "CCF-A" }]
@@ -205,6 +243,10 @@ class FakeElement {
       confirm() {
         confirmCalls += 1;
         return true;
+      },
+      select(...args) {
+        global.__sourceSelectArgs = args;
+        return false;
       }
     }
   };
@@ -230,6 +272,45 @@ class FakeElement {
     undoAction: "undo-action-edit-metadata",
     undoActionArgs: { count: 1 }
   });
+  await registeredMenus[0].menus[3].onCommand();
+  assert.equal(global.__sourceSelectArgs.length, 5);
+  assert.deepEqual(global.__sourceSelectArgs[3], ["全部", "内置", "自定义"]);
+
+  const preferenceWrites = {};
+  global.ChromeUtils = {
+    importESModule() {
+      return {
+        FilePicker: class {
+          constructor() {
+            this.modeOpen = 0;
+            this.returnOK = 0;
+            this.filterAll = 1;
+            this.file = "/tmp/custom-list.csv";
+          }
+          init() {}
+          appendFilter() {}
+          appendFilters() {}
+          async show() { return this.returnOK; }
+        }
+      };
+    }
+  };
+  global.Zotero.File = {
+    async getContentsAsync() {
+      return "venue,tag,aliases,source,type\nMy Test Venue,MTV,,Lab 2026,conference";
+    }
+  };
+  global.Zotero.Prefs = {
+    set(name, value, globalPreference) {
+      preferenceWrites[name] = { value, globalPreference };
+    }
+  };
+  await tagger.importCustomList();
+  assert.equal(
+    JSON.parse(preferenceWrites["extensions.zotero-venue-tagger.customRules"].value).venues[0].acronym,
+    "MTV"
+  );
+  assert.equal(preferenceWrites["extensions.zotero-venue-tagger.customRules"].globalPreference, true);
   console.log("Zotero plugin badge tests passed");
 })().catch(error => {
   console.error(error);
