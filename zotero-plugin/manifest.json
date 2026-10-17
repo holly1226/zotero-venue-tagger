@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "HCI Venue Tagger",
-  "version": "0.4.1",
+  "version": "0.5.2",
   "description": "Identifies HCI journals and conferences, imports custom venue lists, and shows compact classification badges.",
   "author": "holly1226",
   "homepage_url": "https://github.com/holly1226/zotero-venue-tagger",

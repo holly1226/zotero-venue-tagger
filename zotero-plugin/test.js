@@ -98,9 +98,26 @@ const imported = tagger.parseCustomVenueList([
 ].join("\n"));
 assert.equal(imported.venues.length, 2);
 assert.equal(imported.errors.length, 2);
+assert.equal(imported.valid, false);
 assert.deepEqual(imported.sources, ["Lab List"]);
 assert.deepEqual(imported.venues[0].custom_tags, ["MYCONF", "实验室-A"]);
 assert.deepEqual(imported.venues[0].item_types, ["conferencePaper"]);
+
+const chineseTemplate = tagger.parseCustomVenueList([
+  "期刊或会议名称,标签,别名,文献类型",
+  "# 示例行,示例标签,Example,会议",
+  "My New Venue,MNV,New Venue|MNV,会议"
+].join("\n"), { sourceName: "实验室榜单" });
+assert.equal(chineseTemplate.valid, true);
+assert.equal(chineseTemplate.venues.length, 1);
+assert.equal(chineseTemplate.venues[0].source, "实验室榜单");
+
+const invalidTemplate = tagger.parseCustomVenueList([
+  "期刊或会议名称,标签,别名,文献类型",
+  "Broken Venue,BV,,book"
+].join("\n"), { sourceName: "Invalid" });
+assert.equal(invalidTemplate.valid, false);
+assert.match(invalidTemplate.errors[0].reason, /文献类型/);
 
 tagger.setCustomRulesForTests(imported, { scan: "custom", display: "custom" });
 assert.deepEqual(
@@ -115,6 +132,23 @@ assert.deepEqual(
   tagger.selectDisplayTags(["CHI", "CCF-A", "MYCONF", "实验室-A"]),
   ["MYCONF", "实验室-A"]
 );
+tagger.setCustomRulesForTests({ schema_version: 1, venues: [] });
+
+const chiItem = makeItem({
+  itemType: "conferencePaper",
+  title: "Source selection test",
+  proceedingsTitle: "CHI Conference on Human Factors in Computing Systems"
+});
+tagger.setCustomRulesForTests({ schema_version: 1, venues: [] }, {
+  scanIDs: ["builtin:zju"],
+  displayIDs: ["builtin:zju"]
+});
+assert.deepEqual(tagger.classifyItem(chiItem).proposedTags, ["CHI", "浙大-A"]);
+tagger.setCustomRulesForTests({ schema_version: 1, venues: [] }, {
+  scanIDs: ["builtin:ccf"],
+  displayIDs: ["builtin:ccf"]
+});
+assert.deepEqual(tagger.classifyItem(chiItem).proposedTags, ["CHI", "CCF-A"]);
 tagger.setCustomRulesForTests({ schema_version: 1, venues: [] });
 
 const customRules = {
@@ -189,19 +223,29 @@ class FakeElement {
   registeredMenus[0].menus[0].onShowing(null, {
     menuElem: { setAttribute: (name, value) => { menuAttributes[name] = value; } }
   });
-  assert.equal(menuAttributes.label, "识别 HCI 榜单");
+  assert.equal(menuAttributes.label, "识别当前文件夹…");
   assert.equal(menuAttributes.image, "file:///plugin/icons/menu-icon.svg");
   assert.equal(registeredMenus[0].menus[0].icon, "file:///plugin/icons/menu-icon.svg");
+  assert.equal(registeredMenus[0].menus.length, 5);
+  assert.equal(registeredMenus[1].menus.length, 5);
+  const exportAttributes = {};
+  registeredMenus[0].menus[1].onShowing(null, {
+    menuElem: { setAttribute: (name, value) => { exportAttributes[name] = value; } }
+  });
+  assert.equal(exportAttributes.label, "导出识别结果…");
+  assert.equal(exportAttributes.image, "file:///plugin/icons/menu-icon.svg");
   const importAttributes = {};
-  registeredMenus[0].menus[2].onShowing(null, {
+  registeredMenus[0].menus[3].onShowing(null, {
     menuElem: { setAttribute: (name, value) => { importAttributes[name] = value; } }
   });
-  assert.equal(importAttributes.label, "导入榜单 CSV");
-  const scanSourceAttributes = {};
-  registeredMenus[0].menus[3].onShowing(null, {
-    menuElem: { setAttribute: (name, value) => { scanSourceAttributes[name] = value; } }
+  assert.equal(importAttributes.label, "导入自定义榜单…");
+  assert.equal(importAttributes.image, "file:///plugin/icons/menu-icon.svg");
+  const displayAttributes = {};
+  registeredMenus[0].menus[4].onShowing(null, {
+    menuElem: { setAttribute: (name, value) => { displayAttributes[name] = value; } }
   });
-  assert.equal(scanSourceAttributes.label, "识别来源：全部");
+  assert.equal(displayAttributes.label, "设置榜单列显示…");
+  assert.equal(displayAttributes.image, "file:///plugin/icons/menu-icon.svg");
   assert.equal(
     columnConfig.dataProvider({
       getTags: () => [{ tag: "CHI" }, { tag: "浙大-A" }, { tag: "CCF-A" }]
@@ -244,9 +288,9 @@ class FakeElement {
         confirmCalls += 1;
         return true;
       },
-      select(...args) {
-        global.__sourceSelectArgs = args;
-        return false;
+      prompt(_win, _title, _message, value) {
+        value.value = "Lab 2026";
+        return true;
       }
     }
   };
@@ -272,10 +316,6 @@ class FakeElement {
     undoAction: "undo-action-edit-metadata",
     undoActionArgs: { count: 1 }
   });
-  await registeredMenus[0].menus[3].onCommand();
-  assert.equal(global.__sourceSelectArgs.length, 5);
-  assert.deepEqual(global.__sourceSelectArgs[3], ["全部", "内置", "自定义"]);
-
   const preferenceWrites = {};
   global.ChromeUtils = {
     importESModule() {
@@ -311,6 +351,10 @@ class FakeElement {
     "MTV"
   );
   assert.equal(preferenceWrites["extensions.zotero-venue-tagger.customRules"].globalPreference, true);
+  assert.deepEqual(
+    JSON.parse(preferenceWrites["extensions.zotero-venue-tagger.scanSources"].value),
+    ["builtin:zju", "builtin:ccf", "custom:Lab 2026"]
+  );
   console.log("Zotero plugin badge tests passed");
 })().catch(error => {
   console.error(error);

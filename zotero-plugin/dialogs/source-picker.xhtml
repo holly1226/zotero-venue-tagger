@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
+<dialog id="zotero-venue-tagger-source-picker"
+        xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+        title="HCI Venue Tagger"
+        buttons="cancel,accept"
+        width="540">
+  <vbox style="padding: 18px; min-width: 500px;">
+    <hbox align="center" style="margin-bottom: 6px;">
+      <image src="../icons/menu-icon.svg" style="width: 32px; height: 32px; margin-right: 10px;"/>
+      <label id="picker-title" style="font-size: 18px; font-weight: 600;"/>
+    </hbox>
+    <description id="picker-description" style="margin: 0 0 14px 42px; max-width: 460px;"/>
+    <vbox id="source-list" style="padding: 8px 10px; border: 1px solid rgba(127,127,127,.35); border-radius: 8px;"/>
+    <label id="validation-message" style="min-height: 18px; margin-top: 7px; color: #b42318;"/>
+    <hbox style="margin-top: 8px;">
+      <button id="import-button"/>
+      <button id="template-button" style="margin-left: 6px;"/>
+      <spacer flex="1"/>
+    </hbox>
+  </vbox>
+  <script src="source-picker.js"/>
+</dialog>

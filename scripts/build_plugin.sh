@@ -13,9 +13,10 @@ mkdir -p "$dist_dir"
 cp "$plugin_dir/manifest.json" "$plugin_dir/bootstrap.js" "$build_dir/"
 cp -R "$plugin_dir/locale" "$build_dir/"
 cp -R "$plugin_dir/icons" "$build_dir/"
+cp -R "$plugin_dir/dialogs" "$build_dir/"
 node "$repo_dir/scripts/generate_plugin_rules.js" \
   "$repo_dir/references/venue_rules.json" \
   "$repo_dir/references/track_overrides.json" \
   "$build_dir/rules.js"
-(cd "$build_dir" && zip -q -FS -r "$output" manifest.json bootstrap.js rules.js locale icons)
+(cd "$build_dir" && zip -q -FS -r "$output" manifest.json bootstrap.js rules.js locale icons dialogs)
 printf '%s\n' "$output"

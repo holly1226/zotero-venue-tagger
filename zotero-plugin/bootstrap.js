@@ -1,10 +1,13 @@
 var ZoteroVenueTagger = (() => {
   const PLUGIN_ID = "zotero-venue-tagger@holly1226.github.io";
+  const CHROME_PACKAGE = "zotero-venue-tagger";
   const COLUMN_KEY = "venue-rank-badges";
   const PREF_PREFIX = "extensions.zotero-venue-tagger.";
   const PREF_CUSTOM_RULES = `${PREF_PREFIX}customRules`;
   const PREF_SCAN_SOURCE = `${PREF_PREFIX}scanSource`;
   const PREF_DISPLAY_SOURCE = `${PREF_PREFIX}displaySource`;
+  const PREF_SCAN_SOURCES = `${PREF_PREFIX}scanSources`;
+  const PREF_DISPLAY_SOURCES = `${PREF_PREFIX}displaySources`;
   const XHTML_NS = "http://www.w3.org/1999/xhtml";
   const MAX_BADGES = 5;
   const NON_FULL_PREFIXES = [
@@ -30,22 +33,34 @@ var ZoteroVenueTagger = (() => {
     zh: {
       title: "HCI Venue Tagger",
       columnLabel: "HCI 榜单",
-      scanLabel: "识别 HCI 榜单",
-      importLabel: "导入榜单 CSV",
-      scanSourceLabel: "识别来源：{mode}",
-      displaySourceLabel: "列显示：{mode}",
+      scanLabel: "识别当前文件夹…",
+      exportLabel: "导出识别结果…",
+      importLabel: "导入自定义榜单…",
+      displaySourceLabel: "设置榜单列显示…",
       modeBuiltin: "内置",
       modeBoth: "全部",
       modeCustom: "自定义",
       modeCustomSource: "自定义 · {name}",
-      sourcePickerTitle: "选择榜单来源",
-      scanSourcePrompt: "扫描时使用哪些规则？",
-      displaySourcePrompt: "HCI 榜单列显示哪些来源的标签？",
+      sourcePickerTitle: "选择用于识别的榜单",
+      displayPickerTitle: "设置 HCI 榜单列显示",
+      scanSourcePrompt: "可以单选或多选；预览后才会写入标签。",
+      displaySourcePrompt: "选择 HCI 榜单列中要显示的标签来源（不删除 Zotero 标签）。",
+      builtinZju: "浙大设计学榜单（2021）",
+      builtinCcf: "CCF HCI 与普适计算榜单（2022）",
+      customSource: "自定义·{name}（{count} 条）",
+      importInPicker: "＋ 导入 CSV 榜单",
+      downloadTemplate: "下载 CSV 范例",
+      previewScan: "预览识别",
+      saveDisplay: "保存显示设置",
+      chooseAtLeastOne: "请至少选择一个榜单。",
       importTitle: "导入自定义榜单",
-      importPreview: "文件：{name}\n有效规则 {count} 条，来源 {sources} 个。{warnings}\n\n{lines}{more}\n\n导入会替换当前自定义榜单，但不会扫描文献，也不会改动任何 Zotero 标签。继续吗？",
-      importWarnings: "\n已跳过 {count} 行无效或重复数据。",
-      importDone: "已导入 {count} 条自定义规则。\n\n目前识别来源：{scan}\n目前列显示：{display}\n\n导入本身没有扫描文献或写入标签。",
-      importEmpty: "没有找到有效规则。CSV 前两列必须是期刊/会议名和期望标签。{details}",
+      importPreview: "榜单：{name}\n通过格式校验，共 {count} 条。\n\n{lines}{more}\n\n导入只会保存识别规则，不会扫描文献或改动 Zotero 标签。继续吗？",
+      importDone: "已导入“{name}”，共 {count} 条。\n\n导入本身没有扫描文献或写入标签。",
+      importEmpty: "没有找到可导入的数据行。请下载范例并按指定格式填写。",
+      importInvalid: "CSV 格式校验未通过，未导入任何内容：\n\n{details}\n\n请修改后重新导入，或在榜单选择窗口下载 CSV 范例。",
+      listNamePrompt: "请确认这份自定义榜单的名称：",
+      replaceSource: "已存在名为“{name}”的榜单。\n\n要用新文件替换这份榜单吗？",
+      templateSaved: "CSV 范例已保存。",
       importFailed: "导入失败：{message}",
       selectOne: "请先在左侧只选中一个文件夹。",
       noItems: "当前文件夹没有可扫描的文献。",
@@ -56,27 +71,41 @@ var ZoteroVenueTagger = (() => {
       more: "\n…另有 {count} 篇",
       done: "已为 {count} 篇文献新增榜单标签。",
       doneWithSkipped: "已为 {count} 篇文献新增榜单标签；另有 {skipped} 篇因文库只读而跳过。",
+      exportDone: "已导出 {count} 篇文献的识别结果。",
+      exportFailed: "导出失败：{message}",
       failed: "扫描失败：{message}"
     },
     en: {
       title: "HCI Venue Tagger",
       columnLabel: "HCI Lists",
-      scanLabel: "Identify HCI Venues",
-      importLabel: "Import List CSV",
-      scanSourceLabel: "Scan source: {mode}",
-      displaySourceLabel: "Column display: {mode}",
+      scanLabel: "Identify Current Collection…",
+      exportLabel: "Export Recognition Results…",
+      importLabel: "Import Custom List…",
+      displaySourceLabel: "Configure HCI Lists Column…",
       modeBuiltin: "Built-in",
       modeBoth: "All",
       modeCustom: "Custom",
       modeCustomSource: "Custom · {name}",
-      sourcePickerTitle: "Choose list sources",
-      scanSourcePrompt: "Which rules should scans use?",
-      displaySourcePrompt: "Which sources should the HCI Lists column display?",
+      sourcePickerTitle: "Choose Lists for Recognition",
+      displayPickerTitle: "Configure HCI Lists Column",
+      scanSourcePrompt: "Select one or more lists. Tags are written only after a separate preview.",
+      displaySourcePrompt: "Choose which sources appear in the HCI Lists column. Zotero tags are not deleted.",
+      builtinZju: "ZJU Design List (2021)",
+      builtinCcf: "CCF HCI & Ubiquitous Computing (2022)",
+      customSource: "Custom · {name} ({count} rules)",
+      importInPicker: "+ Import CSV List",
+      downloadTemplate: "Download CSV Example",
+      previewScan: "Preview Recognition",
+      saveDisplay: "Save Display Settings",
+      chooseAtLeastOne: "Select at least one list.",
       importTitle: "Import Custom List",
-      importPreview: "File: {name}\n{count} valid rules from {sources} source(s).{warnings}\n\n{lines}{more}\n\nImporting replaces the current custom list, but does not scan items or change any Zotero tags. Continue?",
-      importWarnings: "\nSkipped {count} invalid or duplicate row(s).",
-      importDone: "Imported {count} custom rules.\n\nCurrent scan source: {scan}\nCurrent column display: {display}\n\nThe import itself did not scan items or write tags.",
-      importEmpty: "No valid rules were found. The first two CSV columns must contain a journal/conference name and desired tag.{details}",
+      importPreview: "List: {name}\nFormat validation passed with {count} rules.\n\n{lines}{more}\n\nImporting saves recognition rules only; it does not scan items or change Zotero tags. Continue?",
+      importDone: "Imported \"{name}\" with {count} rules.\n\nThe import itself did not scan items or write tags.",
+      importEmpty: "No data rows were found. Download the example and follow its format.",
+      importInvalid: "CSV validation failed. Nothing was imported:\n\n{details}\n\nCorrect the file and import it again, or download the CSV example from the list picker.",
+      listNamePrompt: "Confirm a name for this custom list:",
+      replaceSource: "A list named \"{name}\" already exists.\n\nReplace that list with the new file?",
+      templateSaved: "The CSV example was saved.",
       importFailed: "Import failed: {message}",
       selectOne: "Select exactly one collection in the left pane first.",
       noItems: "The current collection has no scannable items.",
@@ -87,12 +116,15 @@ var ZoteroVenueTagger = (() => {
       more: "\n…and {count} more",
       done: "Added classification tags to {count} items.",
       doneWithSkipped: "Added classification tags to {count} items; skipped {skipped} item(s) because the library is read-only.",
+      exportDone: "Exported recognition results for {count} items.",
+      exportFailed: "Export failed: {message}",
       failed: "Scan failed: {message}"
     }
   };
 
   let registeredDataKey = null;
   let registeredMenuIDs = [];
+  let chromeHandle = null;
   let ruleData = { rules: { venues: [] }, overrides: { overrides: {} } };
   let customRuleData = { schema_version: 1, venues: [] };
   let builtinVenueTags = new Set(FALLBACK_VENUE_TAGS);
@@ -101,6 +133,9 @@ var ZoteroVenueTagger = (() => {
   let customTagOrder = new Map();
   let scanSourceMode = "both";
   let displaySourceMode = "both";
+  let scanSourceIDs = ["builtin:zju", "builtin:ccf"];
+  let displaySourceIDs = ["builtin:zju", "builtin:ccf"];
+  let pluginRootURI = null;
   let scanning = false;
 
   function language() {
@@ -133,16 +168,68 @@ var ZoteroVenueTagger = (() => {
     return text(mode === "builtin" ? "modeBuiltin" : mode === "custom" ? "modeCustom" : "modeBoth");
   }
 
+  function customSourceID(name) {
+    return `custom:${name}`;
+  }
+
+  function customSourceName(id) {
+    return String(id || "").startsWith("custom:") ? String(id).slice(7) : null;
+  }
+
+  function availableSources() {
+    const sources = [
+      { id: "builtin:zju", label: text("builtinZju"), kind: "builtin" },
+      { id: "builtin:ccf", label: text("builtinCcf"), kind: "builtin" }
+    ];
+    const counts = new Map();
+    for (const rule of customRuleData.venues || []) {
+      const name = cleanText(rule.source);
+      if (name) counts.set(name, (counts.get(name) || 0) + 1);
+    }
+    for (const [name, count] of counts) {
+      sources.push({
+        id: customSourceID(name),
+        label: text("customSource", { name, count }),
+        kind: "custom",
+        count
+      });
+    }
+    return sources;
+  }
+
+  function allSourceIDs() {
+    return availableSources().map(source => source.id);
+  }
+
+  function normalizeSourceIDs(value, fallback = ["builtin:zju", "builtin:ccf"]) {
+    const allowed = new Set(allSourceIDs());
+    const candidates = Array.isArray(value) ? value : [];
+    const result = [...new Set(candidates.map(String).filter(id => allowed.has(id)))];
+    return result.length ? result : fallback.filter(id => allowed.has(id));
+  }
+
+  function sourceIDsFromLegacyMode(mode) {
+    if (mode === "builtin") return ["builtin:zju", "builtin:ccf"];
+    if (mode === "custom") return allSourceIDs().filter(id => id.startsWith("custom:"));
+    const name = sourceNameFromMode(mode || "");
+    if (name) return [customSourceID(name)];
+    return allSourceIDs();
+  }
+
   function tagKind(tag) {
-    const builtinAllowed = includesBuiltin(displaySourceMode);
-    const selectedCustomTags = sourceNameFromMode(displaySourceMode)
-      ? (customTagsBySource.get(sourceNameFromMode(displaySourceMode)) || new Set())
-      : customTags;
-    const customAllowed = includesCustom(displaySourceMode) && selectedCustomTags.has(tag);
-    if (builtinAllowed && builtinVenueTags.has(tag)) return "venue";
-    if (/^浙大-[ABC]$/.test(tag) && (builtinAllowed || customAllowed)) return "zju";
-    if (/^CCF-[ABC]$/.test(tag) && (builtinAllowed || customAllowed)) return "ccf";
-    if (TRACK_PATTERN.test(tag) && (builtinAllowed || includesCustom(displaySourceMode))) return "track";
+    const zjuAllowed = displaySourceIDs.includes("builtin:zju");
+    const ccfAllowed = displaySourceIDs.includes("builtin:ccf");
+    const selectedCustomTags = new Set();
+    for (const id of displaySourceIDs) {
+      const name = customSourceName(id);
+      if (!name) continue;
+      for (const value of customTagsBySource.get(name) || []) selectedCustomTags.add(value);
+    }
+    const customAllowed = selectedCustomTags.has(tag);
+    if ((zjuAllowed || ccfAllowed) && builtinVenueTags.has(tag)) return "venue";
+    if (/^浙大-[ABC]$/.test(tag) && (zjuAllowed || customAllowed)) return "zju";
+    if (/^CCF-[ABC]$/.test(tag) && (ccfAllowed || customAllowed)) return "ccf";
+    if (TRACK_PATTERN.test(tag) && displaySourceIDs.length) return "track";
     if (customAllowed) return "custom";
     return null;
   }
@@ -248,34 +335,68 @@ var ZoteroVenueTagger = (() => {
     const result = [];
     if (/conference|meeting|会议/.test(normalized)) result.push("conferencePaper");
     if (/journal|期刊/.test(normalized)) result.push("journalArticle");
-    return result.length ? result : ["conferencePaper", "journalArticle"];
+    return result.length ? result : null;
   }
 
-  function looksLikeHeader(row) {
-    const first = cleanText(row[0]).toLowerCase();
-    const second = cleanText(row[1]).toLowerCase();
-    return /venue|journal|conference|期刊|会议/.test(first) && /tag|label|标签/.test(second);
+  function normalizedHeader(value) {
+    return cleanText(value).toLowerCase().replace(/[\s_\-/]/g, "");
   }
 
-  function parseCustomVenueList(input) {
+  function headerIndexes(row) {
+    const aliases = {
+      venue: new Set(["venue", "journal", "conference", "journalorconference", "期刊或会议名称", "期刊会议名称", "期刊", "会议"]),
+      tags: new Set(["tag", "tags", "label", "labels", "标签"]),
+      aliases: new Set(["alias", "aliases", "alternativenames", "别名"]),
+      type: new Set(["type", "itemtype", "文献类型", "类型"]),
+      source: new Set(["source", "listname", "榜单名称", "来源"])
+    };
+    const result = {};
+    row.forEach((value, index) => {
+      const normalized = normalizedHeader(value);
+      for (const [key, values] of Object.entries(aliases)) {
+        if (values.has(normalized) && result[key] === undefined) result[key] = index;
+      }
+    });
+    return result;
+  }
+
+  function parseCustomVenueList(input, options = {}) {
     const rows = parseDelimitedText(input);
-    const dataRows = rows.slice(looksLikeHeader(rows[0] || []) ? 1 : 0);
+    const indexes = headerIndexes(rows[0] || []);
     const venues = [];
     const errors = [];
     const seen = new Set();
-    for (let index = 0; index < dataRows.length; index += 1) {
-      const row = dataRows[index];
-      const venue = cleanText(row[0]);
-      const tags = splitList(row[1]);
+    if (indexes.venue === undefined || indexes.tags === undefined) {
+      errors.push({ row: 1, reason: language() === "zh"
+        ? "缺少必需列：期刊或会议名称、标签"
+        : "missing required headers: venue and tag" });
+      return { schema_version: 1, venues, errors, sources: [], valid: false };
+    }
+    for (let index = 1; index < rows.length; index += 1) {
+      const row = rows[index];
+      const firstValue = cleanText(row[indexes.venue]);
+      if (firstValue.startsWith("#")) continue;
+      const venue = firstValue;
+      const tags = splitList(row[indexes.tags]);
       if (!venue || !tags.length) {
-        errors.push({ row: index + 1, reason: "missing venue or tag" });
+        errors.push({ row: index + 1, reason: language() === "zh" ? "期刊/会议名或标签为空" : "venue or tag is empty" });
         continue;
       }
-      const aliases = splitList(row[2]);
-      const source = cleanText(row[3]) || (language() === "zh" ? "自定义榜单" : "Custom list");
+      const aliases = indexes.aliases === undefined ? [] : splitList(row[indexes.aliases]);
+      const source = cleanText(options.sourceName)
+        || (indexes.source === undefined ? "" : cleanText(row[indexes.source]))
+        || (language() === "zh" ? "自定义榜单" : "Custom list");
       const duplicateKey = `${source}\u0000${venue}`.toLowerCase();
       if (seen.has(duplicateKey)) {
-        errors.push({ row: index + 1, reason: "duplicate venue" });
+        errors.push({ row: index + 1, reason: language() === "zh" ? "期刊/会议名重复" : "duplicate venue" });
+        continue;
+      }
+      const typeValue = indexes.type === undefined ? "" : row[indexes.type];
+      const itemTypes = customItemTypes(typeValue);
+      if (!itemTypes) {
+        errors.push({ row: index + 1, reason: language() === "zh"
+          ? `文献类型“${cleanText(typeValue)}”无效，请填“会议”、“期刊”或留空`
+          : `invalid item type \"${cleanText(typeValue)}\"; use conference, journal, or blank` });
         continue;
       }
       seen.add(duplicateKey);
@@ -286,7 +407,7 @@ var ZoteroVenueTagger = (() => {
         custom_tags: [...new Set(tags)],
         source,
         priority: 200,
-        item_types: customItemTypes(row[4]),
+        item_types: itemTypes,
         patterns: [...new Set([venue, ...aliases])].map(customVenuePattern)
       });
     }
@@ -294,7 +415,8 @@ var ZoteroVenueTagger = (() => {
       schema_version: 1,
       venues,
       errors,
-      sources: [...new Set(venues.map(rule => rule.source))]
+      sources: [...new Set(venues.map(rule => rule.source))],
+      valid: errors.length === 0 && venues.length > 0
     };
   }
 
@@ -419,39 +541,81 @@ var ZoteroVenueTagger = (() => {
     return track === "EA" || track === "Companion";
   }
 
-  function classifyItem(item, rules = activeRules(), overrides = ruleData.overrides) {
+  function classificationResult(item, proposedTags, matches, track) {
+    proposedTags = [...new Set(proposedTags.filter(Boolean))];
+    const currentTags = typeof item.getTags === "function" ? item.getTags() : (item.tags || []);
+    const currentSet = new Set(currentTags.map(entry => cleanText(typeof entry === "string" ? entry : entry.tag).toLowerCase()));
+    const addTags = proposedTags.filter(tag => !currentSet.has(tag.toLowerCase()));
+    const primary = matches[0];
+    return {
+      item,
+      key: item.key || "",
+      title: cleanText(itemField(item, "title")),
+      venue: primary?.acronym || proposedTags[0],
+      track,
+      nonFull: isNonFull(track),
+      trackNeedsReview: trackNeedsReview(track),
+      proposedTags,
+      addTags,
+      sources: matches.map(match => match.sourceLabel).filter(Boolean),
+      matches
+    };
+  }
+
+  function classifyItemForSources(item, sourceIDs = scanSourceIDs, overrides = ruleData.overrides) {
+    const selected = new Set(normalizeSourceIDs(sourceIDs));
+    const zjuSelected = selected.has("builtin:zju");
+    const ccfSelected = selected.has("builtin:ccf");
+    const matches = [];
+    const proposedTags = [];
+    const track = inferTrack(item, overrides);
+
+    if (zjuSelected || ccfSelected) {
+      const rule = matchRule(item, ruleData.rules);
+      if (rule) {
+        matches.push({ ...rule, sourceLabel: [zjuSelected ? text("builtinZju") : null, ccfSelected ? text("builtinCcf") : null].filter(Boolean).join(" + ") });
+        proposedTags.push(rule.acronym);
+        if (!isNonFull(track)) {
+          if (zjuSelected) {
+            const zju = rule.zju || (ccfSelected ? rule.ccf : null);
+            if (zju) proposedTags.push(`浙大-${zju}`);
+          }
+          if (ccfSelected && rule.ccf) proposedTags.push(`CCF-${rule.ccf}`);
+        }
+      }
+    }
+
+    for (const id of selected) {
+      const sourceName = customSourceName(id);
+      if (!sourceName) continue;
+      const rule = matchRule(item, {
+        venues: (customRuleData.venues || []).filter(value => value.source === sourceName)
+      });
+      if (!rule) continue;
+      matches.push({ ...rule, sourceLabel: sourceName });
+      proposedTags.push(...(rule.custom_tags || [rule.acronym]));
+    }
+
+    if (!matches.length) return null;
+    if (track) proposedTags.push(track);
+    return classificationResult(item, proposedTags, matches, track);
+  }
+
+  function classifyItem(item, rules = null, overrides = ruleData.overrides) {
+    if (!rules) return classifyItemForSources(item, scanSourceIDs, overrides);
     const rule = matchRule(item, rules);
     if (!rule) return null;
-
     const track = inferTrack(item, overrides);
     const proposedTags = Array.isArray(rule.custom_tags) && rule.custom_tags.length
       ? [...rule.custom_tags]
       : [rule.acronym];
     if (track) proposedTags.push(track);
-
-    if (!rule.custom_tags) {
-      let zju = rule.zju || null;
-      if (!zju && rule.ccf) zju = rule.ccf;
-      if (!isNonFull(track)) {
-        if (zju) proposedTags.push(`浙大-${zju}`);
-        if (rule.ccf) proposedTags.push(`CCF-${rule.ccf}`);
-      }
+    if (!rule.custom_tags && !isNonFull(track)) {
+      const zju = rule.zju || rule.ccf || null;
+      if (zju) proposedTags.push(`浙大-${zju}`);
+      if (rule.ccf) proposedTags.push(`CCF-${rule.ccf}`);
     }
-
-    const currentTags = typeof item.getTags === "function" ? item.getTags() : (item.tags || []);
-    const currentSet = new Set(currentTags.map(entry => cleanText(typeof entry === "string" ? entry : entry.tag).toLowerCase()));
-    const addTags = proposedTags.filter(tag => !currentSet.has(tag.toLowerCase()));
-    return {
-      item,
-      key: item.key || "",
-      title: cleanText(itemField(item, "title")),
-      venue: rule.acronym || proposedTags[0],
-      track,
-      nonFull: isNonFull(track),
-      trackNeedsReview: trackNeedsReview(track),
-      proposedTags,
-      addTags
-    };
+    return classificationResult(item, proposedTags, [{ ...rule, sourceLabel: "" }], track);
   }
 
   function itemDisplayValue(item) {
@@ -552,6 +716,20 @@ var ZoteroVenueTagger = (() => {
       globalThis.Zotero?.debug?.(`[Zotero Venue Tagger] Ignoring invalid custom rules: ${error}`);
     }
     refreshVenueTags();
+    try {
+      const storedScan = JSON.parse(getPreference(PREF_SCAN_SOURCES, "null"));
+      scanSourceIDs = normalizeSourceIDs(storedScan, sourceIDsFromLegacyMode(scanSourceMode));
+    }
+    catch (error) {
+      scanSourceIDs = normalizeSourceIDs(sourceIDsFromLegacyMode(scanSourceMode));
+    }
+    try {
+      const storedDisplay = JSON.parse(getPreference(PREF_DISPLAY_SOURCES, "null"));
+      displaySourceIDs = normalizeSourceIDs(storedDisplay, sourceIDsFromLegacyMode(displaySourceMode));
+    }
+    catch (error) {
+      displaySourceIDs = normalizeSourceIDs(sourceIDsFromLegacyMode(displaySourceMode));
+    }
   }
 
   async function refreshItemsView() {
@@ -564,49 +742,93 @@ var ZoteroVenueTagger = (() => {
     }
   }
 
-  async function chooseSourceMode(kind) {
-    const win = Zotero.getMainWindow?.() || null;
-    const current = kind === "scan" ? scanSourceMode : displaySourceMode;
-    const sourceModes = [...new Set((customRuleData.venues || []).map(rule => rule.source))]
-      .map(source => `source:${source}`);
-    const modes = ["both", "builtin", "custom", ...sourceModes];
-    const labels = modes.map(mode => sourceModeLabel(mode));
-    const selected = { value: Math.max(0, modes.indexOf(current)) };
-    const accepted = Services.prompt.select(
-      win,
-      text("sourcePickerTitle"),
-      text(kind === "scan" ? "scanSourcePrompt" : "displaySourcePrompt"),
-      labels,
-      selected
-    );
-    if (!accepted) return;
-    const mode = modes[selected.value] || "both";
+  function saveSourceIDs(kind, ids) {
+    const normalized = normalizeSourceIDs(ids);
     if (kind === "scan") {
-      scanSourceMode = mode;
-      setPreference(PREF_SCAN_SOURCE, mode);
+      scanSourceIDs = normalized;
+      setPreference(PREF_SCAN_SOURCES, JSON.stringify(normalized));
     }
     else {
-      displaySourceMode = mode;
-      setPreference(PREF_DISPLAY_SOURCE, mode);
-      await refreshItemsView();
+      displaySourceIDs = normalized;
+      setPreference(PREF_DISPLAY_SOURCES, JSON.stringify(normalized));
+    }
+    return normalized;
+  }
+
+  function openSourcePicker(kind, selectedIDs) {
+    const win = Zotero.getMainWindow?.() || null;
+    if (!win?.openDialog || !pluginRootURI) return { action: "accept", selected: selectedIDs };
+    const data = {
+      title: text(kind === "scan" ? "sourcePickerTitle" : "displayPickerTitle"),
+      description: text(kind === "scan" ? "scanSourcePrompt" : "displaySourcePrompt"),
+      sources: availableSources(),
+      selected: [...selectedIDs],
+      acceptLabel: text(kind === "scan" ? "previewScan" : "saveDisplay"),
+      importLabel: text("importInPicker"),
+      templateLabel: text("downloadTemplate"),
+      validationMessage: text("chooseAtLeastOne"),
+      result: null
+    };
+    const pickerURL = chromeHandle
+      ? `chrome://${CHROME_PACKAGE}/content/dialogs/source-picker.xhtml`
+      : `${pluginRootURI}dialogs/source-picker.xhtml`;
+    win.openDialog(
+      pickerURL,
+      "zotero-venue-tagger-source-picker",
+      "chrome,dialog,modal,centerscreen,resizable=no",
+      data
+    );
+    return data.result || { action: "cancel", selected: selectedIDs };
+  }
+
+  async function chooseSourceIDs(kind) {
+    let selected = normalizeSourceIDs(kind === "scan" ? scanSourceIDs : displaySourceIDs);
+    while (true) {
+      const result = openSourcePicker(kind, selected);
+      selected = normalizeSourceIDs(result.selected, selected);
+      if (result.action === "cancel") return null;
+      if (result.action === "template") {
+        await downloadCSVTemplate();
+        continue;
+      }
+      if (result.action === "import") {
+        const importedSource = await importCustomList({ quiet: true });
+        if (importedSource) selected = [...new Set([...selected, customSourceID(importedSource)])];
+        continue;
+      }
+      const saved = saveSourceIDs(kind, selected);
+      if (kind === "display") await refreshItemsView();
+      return saved;
     }
   }
 
   function importPreviewMessage(fileName, parsed) {
     const lines = parsed.venues.slice(0, 12).map(rule =>
-      `• ${rule.name} → ${rule.custom_tags.join(" · ")}  [${rule.source}]`
+      `• ${rule.name} → ${rule.custom_tags.join(" · ")}`
     ).join("\n");
     return text("importPreview", {
       name: fileName,
       count: parsed.venues.length,
-      sources: parsed.sources.length,
-      warnings: parsed.errors.length ? text("importWarnings", { count: parsed.errors.length }) : "",
       lines,
       more: parsed.venues.length > 12 ? text("more", { count: parsed.venues.length - 12 }) : ""
     });
   }
 
-  async function importCustomList() {
+  function pathFileName(file) {
+    const value = file?.path || String(file || "");
+    return value.split(/[\\/]/).pop() || "custom-list.csv";
+  }
+
+  function baseFileName(file) {
+    return pathFileName(file).replace(/\.(?:csv|tsv|txt)$/i, "") || (language() === "zh" ? "自定义榜单" : "Custom list");
+  }
+
+  function formatImportErrors(errors) {
+    return errors.slice(0, 12).map(error => `${language() === "zh" ? "第" : "Row "}${error.row}${language() === "zh" ? " 行" : ""}：${error.reason}`).join("\n")
+      + (errors.length > 12 ? text("more", { count: errors.length - 12 }) : "");
+  }
+
+  async function importCustomList(options = {}) {
     const win = Zotero.getMainWindow?.() || null;
     try {
       const { FilePicker } = ChromeUtils.importESModule("chrome://zotero/content/modules/filePicker.mjs");
@@ -617,38 +839,67 @@ var ZoteroVenueTagger = (() => {
       if ((await picker.show()) !== picker.returnOK) return;
 
       const contents = await Zotero.File.getContentsAsync(picker.file);
-      const parsed = parseCustomVenueList(contents);
-      if (!parsed.venues.length) {
-        const details = parsed.errors.length ? `\n${parsed.errors.length} row(s) skipped.` : "";
-        promptAlert(text("importEmpty", { details }), win);
+      const listName = { value: baseFileName(picker.file) };
+      if (!Services.prompt.prompt(win, text("importTitle"), text("listNamePrompt"), listName, null, {})) return;
+      listName.value = cleanText(listName.value);
+      if (!listName.value) {
+        promptAlert(text("importInvalid", { details: language() === "zh" ? "榜单名称不能为空。" : "The list name cannot be empty." }), win);
         return;
       }
-      const fileName = String(picker.file).split(/[\\/]/).pop();
-      if (!Services.prompt.confirm(win, text("title"), importPreviewMessage(fileName, parsed))) return;
-
-      customRuleData = { schema_version: 1, venues: parsed.venues };
-      for (const kind of ["scan", "display"]) {
-        const mode = kind === "scan" ? scanSourceMode : displaySourceMode;
-        const selectedSource = sourceNameFromMode(mode);
-        if (selectedSource && !parsed.sources.includes(selectedSource)) {
-          if (kind === "scan") scanSourceMode = "custom";
-          else displaySourceMode = "custom";
-        }
+      const parsed = parseCustomVenueList(contents, { sourceName: listName.value });
+      if (parsed.errors.length) {
+        promptAlert(text("importInvalid", { details: formatImportErrors(parsed.errors) }), win);
+        return;
       }
+      if (!parsed.venues.length) {
+        promptAlert(text("importEmpty"), win);
+        return;
+      }
+      if (!Services.prompt.confirm(win, text("title"), importPreviewMessage(listName.value, parsed))) return;
+
+      const existing = (customRuleData.venues || []).some(rule => rule.source === listName.value);
+      if (existing && !Services.prompt.confirm(win, text("title"), text("replaceSource", { name: listName.value }))) {
+        return;
+      }
+      const preserved = (customRuleData.venues || []).filter(rule => rule.source !== listName.value);
+      customRuleData = { schema_version: 1, venues: [...preserved, ...parsed.venues] };
       setPreference(PREF_CUSTOM_RULES, JSON.stringify(customRuleData));
-      setPreference(PREF_SCAN_SOURCE, scanSourceMode);
-      setPreference(PREF_DISPLAY_SOURCE, displaySourceMode);
       refreshVenueTags();
+      scanSourceIDs = saveSourceIDs("scan", [...scanSourceIDs, customSourceID(listName.value)]);
+      displaySourceIDs = saveSourceIDs("display", [...displaySourceIDs, customSourceID(listName.value)]);
       await refreshItemsView();
-      promptAlert(text("importDone", {
-        count: parsed.venues.length,
-        scan: sourceModeLabel(scanSourceMode),
-        display: sourceModeLabel(displaySourceMode)
-      }), win);
+      if (!options.quiet) promptAlert(text("importDone", { name: listName.value, count: parsed.venues.length }), win);
+      return listName.value;
     }
     catch (error) {
       Zotero.logError?.(error);
       promptAlert(text("importFailed", { message: error.message || error }), win);
+      return null;
+    }
+  }
+
+  async function downloadCSVTemplate() {
+    const win = Zotero.getMainWindow?.() || null;
+    try {
+      const { FilePicker } = ChromeUtils.importESModule("chrome://zotero/content/modules/filePicker.mjs");
+      const picker = new FilePicker();
+      picker.init(win, text("downloadTemplate"), picker.modeSave);
+      picker.defaultString = language() === "zh" ? "HCI榜单导入范例.csv" : "HCI-list-import-example.csv";
+      picker.defaultExtension = "csv";
+      picker.appendFilter("CSV", "*.csv");
+      const result = await picker.show();
+      if (result !== picker.returnOK && result !== picker.returnReplace) return false;
+      const content = language() === "zh"
+        ? "\uFEFF期刊或会议名称,标签,别名,文献类型\n# 示例会议名称（请替换）,示例标签,Example Conference|EC,会议\n# 示例期刊名称（请替换）,示例标签,Example Journal,期刊\n"
+        : "\uFEFFvenue,tag,aliases,type\n# Example Conference (replace this row),Example-Tag,Example Conference|EC,conference\n# Example Journal (replace this row),Example-Tag,Example Journal,journal\n";
+      await Zotero.File.putContentsAsync(picker.file, content);
+      promptAlert(text("templateSaved"), win);
+      return true;
+    }
+    catch (error) {
+      Zotero.logError?.(error);
+      promptAlert(text("importFailed", { message: error.message || error }), win);
+      return false;
     }
   }
 
@@ -665,6 +916,13 @@ var ZoteroVenueTagger = (() => {
     if (!Array.isArray(rows) || rows.length !== 1) return null;
     const collection = rows[0]?.ref;
     return collection && typeof collection.getChildItems === "function" ? collection : null;
+  }
+
+  function regularCollectionItems(collection) {
+    return (collection?.getChildItems?.() || []).filter(item => {
+      if (typeof item.isRegularItem === "function") return item.isRegularItem();
+      return !["attachment", "note", "annotation"].includes(itemTypeName(item));
+    });
   }
 
   function previewMessage(collection, rows, total) {
@@ -710,16 +968,16 @@ var ZoteroVenueTagger = (() => {
         return;
       }
 
-      const items = (collection.getChildItems() || []).filter(item => {
-        if (typeof item.isRegularItem === "function") return item.isRegularItem();
-        return !["attachment", "note", "annotation"].includes(itemTypeName(item));
-      });
+      const selectedSources = await chooseSourceIDs("scan");
+      if (!selectedSources) return;
+
+      const items = regularCollectionItems(collection);
       if (!items.length) {
         promptAlert(text("noItems"), win);
         return;
       }
 
-      const rows = items.map(item => classifyItem(item)).filter(Boolean);
+      const rows = items.map(item => classifyItemForSources(item, selectedSources)).filter(Boolean);
       if (!rows.length) {
         promptAlert(text("noMatch"), win);
         return;
@@ -765,6 +1023,94 @@ var ZoteroVenueTagger = (() => {
     }
   }
 
+  function csvValue(value) {
+    const normalized = String(value ?? "").replace(/\r?\n/g, " ");
+    return /[",\r\n]/.test(normalized) ? `"${normalized.replaceAll('"', '""')}"` : normalized;
+  }
+
+  function itemCreators(item) {
+    try {
+      return (item.getCreators?.() || []).map(creator => {
+        if (creator.name) return cleanText(creator.name);
+        return cleanText([creator.firstName, creator.lastName].filter(Boolean).join(" "));
+      }).filter(Boolean).join("; ");
+    }
+    catch (error) {
+      return "";
+    }
+  }
+
+  function itemVenueName(item) {
+    for (const field of ["publicationTitle", "proceedingsTitle", "conferenceName", "seriesTitle", "bookTitle"]) {
+      const value = cleanText(itemField(item, field));
+      if (value) return value;
+    }
+    return "";
+  }
+
+  function recognitionExportRows(items, sourceIDs = scanSourceIDs) {
+    return items.map(item => {
+      const result = classifyItemForSources(item, sourceIDs);
+      const tags = result?.proposedTags || [];
+      const currentTags = (item.getTags?.() || []).map(value => cleanText(typeof value === "string" ? value : value.tag)).filter(Boolean);
+      const year = (cleanText(itemField(item, "date")).match(/\b(?:18|19|20|21)\d{2}\b/) || [""])[0];
+      return [
+        cleanText(itemField(item, "title")),
+        itemCreators(item),
+        year,
+        itemTypeName(item),
+        itemVenueName(item),
+        result?.venue || "",
+        tags.find(tag => /^浙大-[ABC]$/.test(tag)) || "",
+        tags.find(tag => /^CCF-[ABC]$/.test(tag)) || "",
+        result?.track || "",
+        tags.filter(tag => customTags.has(tag)).join(" | "),
+        tags.join(" | "),
+        (result?.sources || []).join(" | "),
+        result ? (result.addTags.length ? (language() === "zh" ? "待写入" : "Not applied") : (language() === "zh" ? "已写入" : "Applied")) : (language() === "zh" ? "未识别" : "Unrecognized"),
+        normalizeDOI(itemField(item, "DOI")),
+        currentTags.join(" | "),
+        item.key || ""
+      ];
+    });
+  }
+
+  async function exportRecognitionResults(preferredCollection = null) {
+    const win = Zotero.getMainWindow?.() || null;
+    try {
+      const pane = Zotero.getActiveZoteroPane();
+      const collection = preferredCollection || (pane && selectedCollection(pane));
+      if (!collection) {
+        promptAlert(text("selectOne"), win);
+        return;
+      }
+      const items = regularCollectionItems(collection);
+      if (!items.length) {
+        promptAlert(text("noItems"), win);
+        return;
+      }
+      const { FilePicker } = ChromeUtils.importESModule("chrome://zotero/content/modules/filePicker.mjs");
+      const picker = new FilePicker();
+      picker.init(win, text("exportLabel"), picker.modeSave);
+      const safeName = cleanText(collection.name).replace(/[\\/:*?"<>|]/g, "-") || "HCI-recognition-results";
+      picker.defaultString = `${safeName}-HCI榜单结果.csv`;
+      picker.defaultExtension = "csv";
+      picker.appendFilter("CSV (Excel)", "*.csv");
+      const pickerResult = await picker.show();
+      if (pickerResult !== picker.returnOK && pickerResult !== picker.returnReplace) return;
+      const headers = language() === "zh"
+        ? ["论文名", "作者", "年份", "文献类型", "期刊/会议名", "Venue 标签", "浙大认定", "CCF 认定", "论文轨道", "自定义标签", "全部识别标签", "榜单来源", "识别状态", "DOI", "Zotero 现有标签", "Zotero Key"]
+        : ["Title", "Authors", "Year", "Item Type", "Journal/Conference", "Venue Tag", "ZJU Rank", "CCF Rank", "Track", "Custom Tags", "All Recognized Tags", "List Sources", "Status", "DOI", "Current Zotero Tags", "Zotero Key"];
+      const csv = [headers, ...recognitionExportRows(items)].map(row => row.map(csvValue).join(",")).join("\r\n");
+      await Zotero.File.putContentsAsync(picker.file, `\uFEFF${csv}\r\n`);
+      promptAlert(text("exportDone", { count: items.length }), win);
+    }
+    catch (error) {
+      Zotero.logError?.(error);
+      promptAlert(text("exportFailed", { message: error.message || error }), win);
+    }
+  }
+
   function loadRuleData(rootURI) {
     if (!rootURI || typeof Services === "undefined") return;
     const scope = {};
@@ -796,56 +1142,48 @@ var ZoteroVenueTagger = (() => {
   function registerMenus(id, rootURI) {
     if (!Zotero.MenuManager?.registerMenu) return;
     const icon = rootURI ? `${rootURI}icons/menu-icon.svg` : null;
-    const scanMenuItem = {
+    const menuItem = (labelKey, onCommand) => ({
       menuType: "menuitem",
       ...(icon ? { icon } : {}),
       onShowing: (_event, context) => {
-        context.menuElem?.setAttribute("label", text("scanLabel"));
-        // Zotero's MenuManager exposes the icon through list-style-image, but
-        // native macOS menus only paint the XUL image child when the explicit
-        // image attribute is present. Keep the official API property above
-        // and mirror it here for the native-menu compatibility path.
+        context.menuElem?.setAttribute("label", text(labelKey));
         if (icon) context.menuElem?.setAttribute("image", icon);
       },
-      onCommand: (_event, context) => scanCurrentCollection(collectionFromMenuContext(context))
-    };
+      onCommand
+    });
+    const menuItems = () => [
+      menuItem("scanLabel", (_event, context) => scanCurrentCollection(collectionFromMenuContext(context))),
+      menuItem("exportLabel", (_event, context) => exportRecognitionResults(collectionFromMenuContext(context))),
+      { menuType: "separator" },
+      menuItem("importLabel", () => importCustomList()),
+      menuItem("displaySourceLabel", () => chooseSourceIDs("display"))
+    ];
     const toolsMenu = Zotero.MenuManager.registerMenu({
       menuID: `${PLUGIN_ID}-main-menubar-tools`,
       pluginID: id || PLUGIN_ID,
       target: "main/menubar/tools",
-      menus: [scanMenuItem, {
-        menuType: "separator"
-      }, {
-        menuType: "menuitem",
-        onShowing: (_event, context) => {
-          context.menuElem?.setAttribute("label", text("importLabel"));
-        },
-        onCommand: () => importCustomList()
-      }, {
-        menuType: "menuitem",
-        onShowing: (_event, context) => {
-          context.menuElem?.setAttribute("label", text("scanSourceLabel", { mode: sourceModeLabel(scanSourceMode) }));
-        },
-        onCommand: () => chooseSourceMode("scan")
-      }, {
-        menuType: "menuitem",
-        onShowing: (_event, context) => {
-          context.menuElem?.setAttribute("label", text("displaySourceLabel", { mode: sourceModeLabel(displaySourceMode) }));
-        },
-        onCommand: () => chooseSourceMode("display")
-      }]
+      menus: menuItems()
     });
     const collectionMenu = Zotero.MenuManager.registerMenu({
       menuID: `${PLUGIN_ID}-main-library-collection`,
       pluginID: id || PLUGIN_ID,
       target: "main/library/collection",
-      menus: [{ ...scanMenuItem }]
+      menus: menuItems()
     });
     registeredMenuIDs = [toolsMenu, collectionMenu];
   }
 
   async function startup({ id, rootURI } = {}) {
     await Zotero.initializationPromise;
+    pluginRootURI = rootURI || null;
+    if (pluginRootURI && typeof Cc !== "undefined" && typeof Ci !== "undefined") {
+      const addonManagerStartup = Cc["@mozilla.org/addons/addon-manager-startup;1"]
+        .getService(Ci.amIAddonManagerStartup);
+      const manifestURI = Services.io.newURI(`${pluginRootURI}manifest.json`);
+      chromeHandle = addonManagerStartup.registerChrome(manifestURI, [
+        ["content", CHROME_PACKAGE, ""]
+      ]);
+    }
     loadRuleData(rootURI);
     loadPreferences();
     for (const win of Zotero.getMainWindows?.() || []) loadLocalization(win);
@@ -872,6 +1210,8 @@ var ZoteroVenueTagger = (() => {
       await Zotero.ItemTreeManager.unregisterColumn(registeredDataKey);
       registeredDataKey = null;
     }
+    chromeHandle?.destruct?.();
+    chromeHandle = null;
   }
 
   function onMainWindowLoad(win) {
@@ -888,6 +1228,8 @@ var ZoteroVenueTagger = (() => {
     scanSourceMode = validSourceMode(modes.scan || "both");
     displaySourceMode = validSourceMode(modes.display || "both");
     refreshVenueTags();
+    scanSourceIDs = normalizeSourceIDs(modes.scanIDs || sourceIDsFromLegacyMode(scanSourceMode));
+    displaySourceIDs = normalizeSourceIDs(modes.displayIDs || sourceIDsFromLegacyMode(displaySourceMode));
   }
 
   return {
@@ -896,6 +1238,11 @@ var ZoteroVenueTagger = (() => {
     onMainWindowLoad,
     scanCurrentCollection,
     importCustomList,
+    downloadCSVTemplate,
+    exportRecognitionResults,
+    chooseSourceIDs,
+    availableSources,
+    recognitionExportRows,
     selectDisplayTags,
     parseDisplayValue,
     parseDelimitedText,

@@ -24,7 +24,7 @@ The default rules use the Zhejiang University Design 2021 list and the 2022 CCF 
 
 ## Zotero plugin
 
-The plugin adds a dedicated **HCI Lists** column to Zotero and displays classification tags as compact badges. Its scan command appears with the project logo as **Identify HCI Venues**. It does not depend on AI4Paper, a cloud service, or an API key.
+The plugin adds a dedicated **HCI Lists** column to Zotero and displays classification tags as compact badges. Its commands share the project logo and do not depend on AI4Paper, a cloud service, or an API key.
 
 ### Install
 
@@ -37,28 +37,29 @@ The one-click plugin supports Zotero 8 through Zotero 10.0.x. Zotero 10 is recom
 
 ### One-click scan
 
-Select exactly one collection, then choose **Tools → Identify HCI Venues**. The same command is available from the collection's context menu.
+Select exactly one collection, then choose **Tools → Identify Current Collection…**. The same command is available from the collection's context menu. A dialog lets you select one or more sources—ZJU, CCF, and any imported custom lists—before the preview is generated.
 
 Zotero shows a preview before writing, including recognized, unmatched, non-full-track, and changed-item counts. Generic `EA` or `Companion` matches are explicitly flagged for review when the metadata does not identify a subtype. Existing tags are preserved, rank tags are not added to non-full-paper records, and Zotero 10 changes can be undone from **Edit → Undo**.
 
-### Custom venue lists (v0.4)
+### Custom venue lists and export (v0.5)
 
-Choose **Tools → Import List CSV** to add your own journal or conference rules. The first two columns are the only required fields:
+Choose **Tools → Import Custom List…**, or use **+ Import CSV List** in the scan dialog. Each imported file becomes one independently selectable named list. Required headers and all data rows are validated before anything is saved:
 
 | Column | Required | Meaning |
 | --- | --- | --- |
-| `venue` | Yes | Journal/conference name to recognize |
-| `tag` | Yes | Tag to add; separate multiple tags with `|` |
-| `aliases` | No | Alternative names, separated with `|` |
-| `source` | No | List name, such as `My Lab 2026` |
-| `type` | No | `conference`, `journal`, or blank for both |
+| `期刊或会议名称` / `venue` | Yes | Journal/conference name to recognize |
+| `标签` / `tag` | Yes | Tag to add; separate multiple tags with `|` |
+| `别名` / `aliases` | No | Alternative names, separated with `|` |
+| `文献类型` / `type` | No | `conference`/会议, `journal`/期刊, or blank for both |
 
-Use the included [CSV template](examples/custom-venue-list.csv). CSV and tab-separated files are accepted. The plugin previews valid, skipped, and duplicate rows before saving the list. Importing a list does not scan the library or change item tags.
+Use **Download CSV Example** in the picker or the included [CSV template](examples/custom-venue-list.csv). CSV and tab-separated files are accepted. Missing headers or fields, duplicate venues, and invalid item types identify the exact row and prevent a partial import. Importing a list does not scan the library or change item tags.
 
-Two short menu controls keep behavior explicit:
+The four branded commands appear in both the Tools menu and a collection's context menu:
 
-- **Scan source** chooses the rules used by the next scan: all, built-in, all custom, or one named custom source.
-- **Column display** independently chooses which configured tags appear in the HCI Lists column. It does not delete Zotero tags.
+- **Identify Current Collection…** chooses lists, previews the result, and writes only after confirmation.
+- **Export Recognition Results…** saves an Excel-friendly UTF-8 CSV with bibliographic fields, recognized tags, list sources, status, DOI, and Zotero key.
+- **Import Custom List…** validates and stores one named CSV list.
+- **Configure HCI Lists Column…** independently chooses which configured sources appear in the HCI Lists column. It does not delete Zotero tags.
 
 ## Codex skill
 
@@ -143,7 +144,7 @@ MIT
 
 ## Zotero 插件
 
-插件会在 Zotero 文献列表中增加独立的 **HCI 榜单** 列，以紧凑徽标显示分类结果。扫描命令会带有项目 Logo，名称为**识别 HCI 榜单**。插件不依赖 AI4Paper、云端服务或 API Key。
+插件会在 Zotero 文献列表中增加独立的 **HCI 榜单** 列，以紧凑徽标显示分类结果。四个操作入口都带有项目 Logo。插件不依赖 AI4Paper、云端服务或 API Key。
 
 ### 安装
 
@@ -156,28 +157,29 @@ MIT
 
 ### 一键扫描
 
-在左侧只选中一个文件夹，然后选择 **工具 → 识别 HCI 榜单**。也可以右键文件夹，选择同名菜单。
+在左侧只选中一个文件夹，然后选择 **工具 → 识别当前文件夹…**。也可以右键文件夹，选择同名菜单。扫描前会弹出榜单选择窗口，浙大、CCF 和已导入的每份自定义榜单均可单选或多选。
 
 写入前会显示预览，包括识别、未识别、非全文轨道和待更新数量；如果元数据只能判断为 `EA` 或 `Companion`、无法确认 Poster/WiP 等子类型，也会明确提示复核。只有确认后才新增标签，原有标签会被保留，非 full-paper 记录不会添加会议等级；在 Zotero 10 中还可以通过**编辑 → 撤销**恢复。
 
-### 自定义榜单（v0.4）
+### 自定义榜单与导出（v0.5）
 
-选择**工具 → 导入榜单 CSV**，即可加入自己的期刊或会议规则。只有前两列是必需的：
+选择**工具 → 导入自定义榜单…**，或在识别弹窗中点击**＋ 导入 CSV 榜单**。每个文件会作为一份可独立勾选的具名榜单；保存前会严格校验表头与每一行：
 
 | 列 | 必需 | 含义 |
 | --- | --- | --- |
-| `venue` | 是 | 需要识别的期刊/会议名 |
-| `tag` | 是 | 期望添加的标签；多个标签用 `|` 分隔 |
-| `aliases` | 否 | 别名，多个别名用 `|` 分隔 |
-| `source` | 否 | 榜单名称，例如 `实验室 2026` |
-| `type` | 否 | `conference`、`journal`，留空表示两者均可 |
+| `期刊或会议名称` / `venue` | 是 | 需要识别的期刊/会议名 |
+| `标签` / `tag` | 是 | 期望添加的标签；多个标签用 `|` 分隔 |
+| `别名` / `aliases` | 否 | 别名，多个别名用 `|` 分隔 |
+| `文献类型` / `type` | 否 | `conference`/会议、`journal`/期刊，留空表示两者均可 |
 
-可直接使用仓库里的 [CSV 模板](examples/custom-venue-list.csv)。支持 CSV 和制表符分隔文件；保存前会预览有效、跳过和重复行。导入榜单本身不会扫描文库，也不会改动文献标签。
+可在弹窗中点击**下载 CSV 范例**，或使用仓库里的 [CSV 范例](examples/custom-venue-list.csv)。支持 CSV 和制表符分隔文件；缺列、必填值为空、venue 重复或文献类型无效时，会指出具体行并取消整次导入。导入榜单本身不会扫描文库，也不会改动文献标签。
 
-菜单中还有两个独立选项：
+工具菜单和文件夹右键菜单中都有四个带 Logo 的入口：
 
-- **识别来源**：决定下次扫描使用全部、内置、全部自定义，还是某一个具名自定义来源。
-- **列显示**：独立决定 HCI 榜单列显示哪些已配置标签，不会删除 Zotero 里的标签。
+- **识别当前文件夹…**：选榜单、看预览，再确认写入。
+- **导出识别结果…**：导出 Excel 可直接打开的 UTF-8 CSV，包含论文基本信息、识别标签、榜单来源、状态、DOI 和 Zotero Key。
+- **导入自定义榜单…**：校验并保存一份具名 CSV 榜单。
+- **设置榜单列显示…**：独立选择 HCI 榜单列显示哪些来源，不会删除 Zotero 里的标签。
 
 ## Codex Skill
 

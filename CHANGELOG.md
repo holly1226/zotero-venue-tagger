@@ -2,6 +2,24 @@
 
 All notable changes to Zotero Venue Tagger are documented here.
 
+## 0.5.2 — 2026-10-17
+
+- Fix the list picker opening as an empty window in packaged XPI installs by using a runtime-registered `chrome://` content URL.
+
+## 0.5.1 — 2026-10-17
+
+- Use Zotero's native XUL dialog controls for the list picker so it renders correctly in Zotero 10.
+
+## 0.5.0 — 2026-10-17
+
+- Replace the ambiguous source controls with a multi-select list picker shown before every scan.
+- Let users import a custom CSV list or download a ready-to-edit example from the same picker.
+- Validate required headers, missing fields, duplicate venues, and invalid item types before importing anything.
+- Keep each imported file as a named custom list that can be selected independently.
+- Add four consistently branded commands to both the Tools menu and collection context menu.
+- Export the current collection's recognition results as an Excel-friendly UTF-8 CSV.
+- Keep scan and column-display source choices independent.
+
 ## 0.4.1 — 2026-10-17
 
 - Fix the list-source chooser for Zotero 10's current prompt API.
