@@ -6,12 +6,12 @@
 
 <p align="center">
   <a href="https://github.com/holly1226/zotero-venue-tagger"><strong>zotero-venue-tagger</strong></a><br>
-  Identify HCI journals and conferences and display compact ZJU, CCF, and publication-track badges.
+  Extensible venue recognition and list-based tagging for Zotero, designed for HCI and design research.
 </p>
 
 **English** | [中文](#中文)
 
-A Zotero plugin for recognizing HCI journals and conferences and adding compact venue, Zhejiang University (ZJU), CCF, and publication-track tags.
+An extensible Zotero plugin that recognizes journal and conference venues and displays compact, list-based tags. It is designed for HCI and design research, includes built-in Zhejiang University (ZJU) Design and CCF data sources, and lets users import their own venue lists and desired tags from CSV.
 
 Examples:
 
@@ -131,7 +131,9 @@ MIT
 
 # 中文
 
-**Zotero Venue Tagger** 是一个用于识别 HCI 期刊与会议，并添加简洁的 venue、浙大认定、CCF 认定和论文类型标签的 Zotero 插件。
+**Zotero Venue Tagger** 是一款面向 HCI 与设计研究的可扩展 Zotero 期刊/会议识别与标签插件。它内置浙大设计学和 CCF 两个榜单数据源，也支持通过 CSV 导入自己的期刊/会议榜单及期望标签。
+
+这里导入的是“期刊/会议名称 → 期望标签”的榜单，不是论文清单。插件会使用选定的一个或多个数据源扫描 Zotero 文献，因此也可扩展到其他学科或机构榜单。
 
 标签示例：
 
