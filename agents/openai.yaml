@@ -1,6 +1,6 @@
 interface:
-  display_name: "Zotero Venue Tagger"
-  short_description: "为 Zotero 文献添加会场、浙大与 CCF 标签"
+  display_name: "HCI Venue Tagger"
+  short_description: "识别 HCI 期刊会议并添加浙大、CCF 与论文轨道标签"
   default_prompt: "Use $zotero-venue-tagger to preview compact venue and ranking tags for my Zotero library."
 
 policy:

@@ -25,4 +25,4 @@ jobs:
       - name: Build and inspect XPI
         run: |
           sh scripts/build_plugin.sh
-          unzip -t dist/zotero-venue-tagger-0.3.0.xpi
+          unzip -t dist/zotero-venue-tagger-*.xpi

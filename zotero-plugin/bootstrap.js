@@ -24,8 +24,9 @@ var ZoteroVenueTagger = (() => {
   const TRACK_PATTERN = /^(?:(?:EA|Companion)(?:-.+)?|Poster|Workshop|Demo|WiP|LBW|Doctoral-Consortium|SRC)$/i;
   const STRINGS = {
     zh: {
-      title: "Zotero Venue Tagger",
-      scanLabel: "扫描当前文件夹（榜单标签）…",
+      title: "HCI Venue Tagger",
+      columnLabel: "HCI 榜单",
+      scanLabel: "识别当前文件夹的 HCI 榜单…",
       selectOne: "请先在左侧只选中一个文件夹。",
       noItems: "当前文件夹没有可扫描的文献。",
       noMatch: "未识别到榜单中的 venue。\n\n不会修改任何标签。",
@@ -38,8 +39,9 @@ var ZoteroVenueTagger = (() => {
       failed: "扫描失败：{message}"
     },
     en: {
-      title: "Zotero Venue Tagger",
-      scanLabel: "Scan Current Collection for Venue Tags…",
+      title: "HCI Venue Tagger",
+      columnLabel: "HCI Lists",
+      scanLabel: "Identify HCI Venues in Current Collection…",
       selectOne: "Select exactly one collection in the left pane first.",
       noItems: "The current collection has no scannable items.",
       noMatch: "No supported venues were recognized.\n\nNo tags were changed.",
@@ -457,14 +459,16 @@ var ZoteroVenueTagger = (() => {
     win?.MozXULElement?.insertFTLIfNeeded("zotero-venue-tagger.ftl");
   }
 
-  function registerMenus(id) {
+  function registerMenus(id, rootURI) {
     if (!Zotero.MenuManager?.registerMenu) return;
+    const icon = rootURI ? `${rootURI}icons/icon-16.png` : null;
     const menu = target => Zotero.MenuManager.registerMenu({
       menuID: `${PLUGIN_ID}-${target.replaceAll("/", "-")}`,
       pluginID: id || PLUGIN_ID,
       target,
       menus: [{
         menuType: "menuitem",
+        ...(icon ? { icon } : {}),
         onShowing: (_event, context) => {
           context.menuElem?.setAttribute("label", text("scanLabel"));
         },
@@ -480,7 +484,7 @@ var ZoteroVenueTagger = (() => {
     for (const win of Zotero.getMainWindows?.() || []) loadLocalization(win);
     registeredDataKey = await Zotero.ItemTreeManager.registerColumn({
       dataKey: COLUMN_KEY,
-      label: "榜单",
+      label: text("columnLabel"),
       pluginID: id || PLUGIN_ID,
       showInColumnPicker: true,
       defaultVisible: true,
@@ -489,7 +493,7 @@ var ZoteroVenueTagger = (() => {
       dataProvider: itemDisplayValue,
       renderCell
     });
-    registerMenus(id);
+    registerMenus(id, rootURI);
     Zotero.debug("[Zotero Venue Tagger] Badge column and scan menus registered");
   }
 

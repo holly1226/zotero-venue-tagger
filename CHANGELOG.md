@@ -2,6 +2,13 @@
 
 All notable changes to Zotero Venue Tagger are documented here.
 
+## 0.3.1 — 2026-10-17
+
+- Add a distinctive multi-list logo to the plugin manifest and Zotero scan menus.
+- Rename the scan action to “Identify HCI Venues in Current Collection…” / “识别当前文件夹的 HCI 榜单…”.
+- Rename the item-list column to “HCI Lists” / “HCI 榜单”.
+- Refresh the GitHub project presentation while keeping all classification rules unchanged.
+
 ## 0.3.0 — 2026-10-16
 
 - Report recognized, unmatched, non-full-track, and changed-item counts before writing.

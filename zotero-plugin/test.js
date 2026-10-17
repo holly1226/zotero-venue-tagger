@@ -150,15 +150,19 @@ class FakeElement {
     }
   };
 
-  await tagger.startup({ id: "zotero-venue-tagger@holly1226.github.io" });
-  assert.equal(columnConfig.label, "榜单");
+  await tagger.startup({
+    id: "zotero-venue-tagger@holly1226.github.io",
+    rootURI: "file:///plugin/"
+  });
+  assert.equal(columnConfig.label, "HCI 榜单");
   assert.equal(columnConfig.defaultVisible, true);
   assert.deepEqual(registeredMenus.map(menu => menu.target), ["main/menubar/tools", "main/library/collection"]);
   let menuLabel = "";
   registeredMenus[0].menus[0].onShowing(null, {
     menuElem: { setAttribute: (_name, value) => { menuLabel = value; } }
   });
-  assert.equal(menuLabel, "扫描当前文件夹（榜单标签）…");
+  assert.equal(menuLabel, "识别当前文件夹的 HCI 榜单…");
+  assert.equal(registeredMenus[0].menus[0].icon, "file:///plugin/icons/icon-16.png");
   assert.equal(
     columnConfig.dataProvider({
       getTags: () => [{ tag: "CHI" }, { tag: "浙大-A" }, { tag: "CCF-A" }]
