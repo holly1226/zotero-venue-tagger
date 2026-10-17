@@ -471,6 +471,11 @@ var ZoteroVenueTagger = (() => {
         ...(icon ? { icon } : {}),
         onShowing: (_event, context) => {
           context.menuElem?.setAttribute("label", text("scanLabel"));
+          // Zotero's MenuManager exposes the icon through list-style-image, but
+          // native macOS menus only paint the XUL image child when the explicit
+          // image attribute is present. Keep the official API property above
+          // and mirror it here for the native-menu compatibility path.
+          if (icon) context.menuElem?.setAttribute("image", icon);
         },
         onCommand: (_event, context) => scanCurrentCollection(collectionFromMenuContext(context))
       }]

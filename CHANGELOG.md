@@ -2,6 +2,10 @@
 
 All notable changes to Zotero Venue Tagger are documented here.
 
+## 0.3.3 — 2026-10-17
+
+- Mirror the MenuManager icon onto the native XUL `image` attribute so the project logo is rendered in macOS menus.
+
 ## 0.3.2 — 2026-10-17
 
 - Shorten the scan action to “Identify HCI Venues…” / “识别 HCI 榜单…” so it fits compact menus.

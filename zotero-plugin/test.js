@@ -157,11 +157,12 @@ class FakeElement {
   assert.equal(columnConfig.label, "HCI 榜单");
   assert.equal(columnConfig.defaultVisible, true);
   assert.deepEqual(registeredMenus.map(menu => menu.target), ["main/menubar/tools", "main/library/collection"]);
-  let menuLabel = "";
+  const menuAttributes = {};
   registeredMenus[0].menus[0].onShowing(null, {
-    menuElem: { setAttribute: (_name, value) => { menuLabel = value; } }
+    menuElem: { setAttribute: (name, value) => { menuAttributes[name] = value; } }
   });
-  assert.equal(menuLabel, "识别 HCI 榜单…");
+  assert.equal(menuAttributes.label, "识别 HCI 榜单…");
+  assert.equal(menuAttributes.image, "file:///plugin/icons/menu-icon.svg");
   assert.equal(registeredMenus[0].menus[0].icon, "file:///plugin/icons/menu-icon.svg");
   assert.equal(
     columnConfig.dataProvider({
