@@ -26,7 +26,7 @@ var ZoteroVenueTagger = (() => {
     zh: {
       title: "HCI Venue Tagger",
       columnLabel: "HCI 榜单",
-      scanLabel: "识别当前文件夹的 HCI 榜单…",
+      scanLabel: "识别 HCI 榜单…",
       selectOne: "请先在左侧只选中一个文件夹。",
       noItems: "当前文件夹没有可扫描的文献。",
       noMatch: "未识别到榜单中的 venue。\n\n不会修改任何标签。",
@@ -41,7 +41,7 @@ var ZoteroVenueTagger = (() => {
     en: {
       title: "HCI Venue Tagger",
       columnLabel: "HCI Lists",
-      scanLabel: "Identify HCI Venues in Current Collection…",
+      scanLabel: "Identify HCI Venues…",
       selectOne: "Select exactly one collection in the left pane first.",
       noItems: "The current collection has no scannable items.",
       noMatch: "No supported venues were recognized.\n\nNo tags were changed.",
@@ -461,7 +461,7 @@ var ZoteroVenueTagger = (() => {
 
   function registerMenus(id, rootURI) {
     if (!Zotero.MenuManager?.registerMenu) return;
-    const icon = rootURI ? `${rootURI}icons/icon-16.png` : null;
+    const icon = rootURI ? `${rootURI}icons/menu-icon.svg` : null;
     const menu = target => Zotero.MenuManager.registerMenu({
       menuID: `${PLUGIN_ID}-${target.replaceAll("/", "-")}`,
       pluginID: id || PLUGIN_ID,

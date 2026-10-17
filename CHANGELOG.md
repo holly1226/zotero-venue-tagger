@@ -2,6 +2,11 @@
 
 All notable changes to Zotero Venue Tagger are documented here.
 
+## 0.3.2 — 2026-10-17
+
+- Shorten the scan action to “Identify HCI Venues…” / “识别 HCI 榜单…” so it fits compact menus.
+- Add a tightly framed, high-contrast SVG menu icon derived from the full project logo.
+
 ## 0.3.1 — 2026-10-17
 
 - Add a distinctive multi-list logo to the plugin manifest and Zotero scan menus.

@@ -161,8 +161,8 @@ class FakeElement {
   registeredMenus[0].menus[0].onShowing(null, {
     menuElem: { setAttribute: (_name, value) => { menuLabel = value; } }
   });
-  assert.equal(menuLabel, "识别当前文件夹的 HCI 榜单…");
-  assert.equal(registeredMenus[0].menus[0].icon, "file:///plugin/icons/icon-16.png");
+  assert.equal(menuLabel, "识别 HCI 榜单…");
+  assert.equal(registeredMenus[0].menus[0].icon, "file:///plugin/icons/menu-icon.svg");
   assert.equal(
     columnConfig.dataProvider({
       getTags: () => [{ tag: "CHI" }, { tag: "浙大-A" }, { tag: "CCF-A" }]
