@@ -2,6 +2,10 @@
 
 All notable changes to Zotero Venue Tagger are documented here.
 
+## 0.3.4 — 2026-10-17
+
+- Remove the trailing ellipsis from the scan command for a cleaner, non-truncated appearance.
+
 ## 0.3.3 — 2026-10-17
 
 - Mirror the MenuManager icon onto the native XUL `image` attribute so the project logo is rendered in macOS menus.

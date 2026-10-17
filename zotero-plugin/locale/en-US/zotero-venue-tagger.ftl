@@ -1,2 +1,2 @@
 zotero-venue-tagger-scan-current-collection =
-    .label = Identify HCI Venues…
+    .label = Identify HCI Venues

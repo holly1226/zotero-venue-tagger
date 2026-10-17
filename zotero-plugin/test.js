@@ -161,7 +161,7 @@ class FakeElement {
   registeredMenus[0].menus[0].onShowing(null, {
     menuElem: { setAttribute: (name, value) => { menuAttributes[name] = value; } }
   });
-  assert.equal(menuAttributes.label, "识别 HCI 榜单…");
+  assert.equal(menuAttributes.label, "识别 HCI 榜单");
   assert.equal(menuAttributes.image, "file:///plugin/icons/menu-icon.svg");
   assert.equal(registeredMenus[0].menus[0].icon, "file:///plugin/icons/menu-icon.svg");
   assert.equal(

@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "HCI Venue Tagger",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Identifies HCI journals and conferences and shows compact ZJU, CCF, and publication-track badges.",
   "author": "holly1226",
   "homepage_url": "https://github.com/holly1226/zotero-venue-tagger",

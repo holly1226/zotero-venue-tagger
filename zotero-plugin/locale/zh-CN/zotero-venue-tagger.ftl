@@ -1,2 +1,2 @@
 zotero-venue-tagger-scan-current-collection =
-    .label = 识别 HCI 榜单…
+    .label = 识别 HCI 榜单
